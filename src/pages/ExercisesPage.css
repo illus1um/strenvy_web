@@ -1,0 +1,47 @@
+.exercises-page .page-header {
+    margin-bottom: 1.5rem;
+}
+
+.exercises-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+}
+
+@media (max-width: 1200px) {
+    .exercises-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 900px) {
+    .exercises-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 540px) {
+    .exercises-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.load-more {
+    display: flex;
+    justify-content: center;
+    margin-top: 2rem;
+}
+
+.error-state {
+    text-align: center;
+    padding: 4rem 2rem;
+}
+
+.error-state h2 {
+    margin-bottom: 0.5rem;
+}
+
+.error-state p {
+    color: var(--color-text-secondary);
+    margin-bottom: 1.5rem;
+}

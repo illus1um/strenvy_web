@@ -1,0 +1,262 @@
+.admin-page .admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.admin-title {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.admin-title svg {
+    color: var(--color-accent-primary);
+}
+
+.admin-title h1 {
+    margin: 0;
+    font-size: 1.75rem;
+}
+
+/* Stats */
+.admin-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.admin-stats .stat-card {
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.admin-stats .stat-card svg {
+    color: var(--color-accent-primary);
+}
+
+.admin-stats .stat-card>div {
+    display: flex;
+    flex-direction: column;
+}
+
+.admin-stats .stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.admin-stats .stat-label {
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+}
+
+/* Tabs */
+.admin-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: 1rem;
+}
+
+.admin-tabs .tab {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-md);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.admin-tabs .tab:hover {
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-primary);
+}
+
+.admin-tabs .tab.active {
+    background: var(--color-accent-primary);
+    color: white;
+}
+
+/* Section */
+.admin-section {
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.section-header h2 {
+    font-size: 1.125rem;
+    margin: 0;
+}
+
+/* Programs List */
+.programs-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.admin-program-card {
+    background: var(--color-bg-tertiary);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+.program-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.program-row:hover {
+    background: var(--color-bg-secondary);
+}
+
+.program-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.difficulty-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.program-info h3 {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.program-meta-inline {
+    font-size: 0.8125rem;
+    color: var(--color-text-tertiary);
+}
+
+.program-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.program-details {
+    padding: 1rem 1.25rem;
+    border-top: 1px solid var(--color-border);
+    background: var(--color-bg-secondary);
+}
+
+.program-details p {
+    margin: 0 0 1rem;
+    color: var(--color-text-secondary);
+}
+
+.schedule-preview {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.day-preview {
+    font-size: 0.875rem;
+}
+
+.day-preview strong {
+    text-transform: capitalize;
+}
+
+.day-preview .exercise-count {
+    color: var(--color-text-tertiary);
+    margin-left: 0.5rem;
+}
+
+/* Exercises Tab */
+.info-text {
+    color: var(--color-text-secondary);
+    margin-bottom: 1.5rem;
+}
+
+.info-text code {
+    background: var(--color-bg-tertiary);
+    padding: 0.125rem 0.375rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.875rem;
+}
+
+.exercises-preview {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 1rem;
+}
+
+.exercise-preview-card {
+    background: var(--color-bg-tertiary);
+    border-radius: var(--radius-md);
+    padding: 0.75rem;
+    text-align: center;
+}
+
+.exercise-preview-card img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: var(--radius-sm);
+    margin-bottom: 0.5rem;
+}
+
+.exercise-preview-card span {
+    font-size: 0.75rem;
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Form Modal */
+.admin-form-modal {
+    max-width: 500px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .admin-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .exercises-preview {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+}
