@@ -1,6 +1,6 @@
 import React, { memo } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
 import {
     Dumbbell,
     Home,
@@ -9,11 +9,15 @@ import {
     BarChart3,
     User,
     Menu,
-    X
+    X,
+    LogOut
 } from 'lucide-react';
+import { logoutUser } from '../../store/slices/userSlice';
 import './Header.css';
 
 const Header = memo(function Header({ onMenuToggle, isMenuOpen }) {
+    const dispatch = useDispatch();
+    const navigate = useNavigate();
     const location = useLocation();
     const { isAuthenticated, currentUser } = useSelector(state => state.user);
 
@@ -24,6 +28,11 @@ const Header = memo(function Header({ onMenuToggle, isMenuOpen }) {
         { path: '/progress', label: 'Progress', icon: BarChart3 },
         { path: '/profile', label: 'Profile', icon: User },
     ];
+
+    const handleLogout = async () => {
+        await dispatch(logoutUser());
+        navigate('/login');
+    };
 
     return (
         <header className="header">
@@ -48,13 +57,27 @@ const Header = memo(function Header({ onMenuToggle, isMenuOpen }) {
 
                 <div className="header-actions">
                     {isAuthenticated ? (
-                        <div className="user-avatar">
-                            {currentUser?.name?.[0]?.toUpperCase() || 'U'}
+                        <div className="user-actions">
+                            <div className="user-avatar" title={currentUser?.name}>
+                                {currentUser?.name?.[0]?.toUpperCase() || 'U'}
+                            </div>
+                            <button
+                                className="btn btn-ghost btn-icon"
+                                onClick={handleLogout}
+                                title="Log Out"
+                            >
+                                <LogOut size={20} />
+                            </button>
                         </div>
                     ) : (
-                        <Link to="/profile" className="btn btn-primary btn-sm">
-                            Get Started
-                        </Link>
+                        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                            <Link to="/login" className="btn btn-ghost">
+                                Log In
+                            </Link>
+                            <Link to="/register" className="btn btn-primary btn-sm">
+                                Get Started
+                            </Link>
+                        </div>
                     )}
 
                     <button

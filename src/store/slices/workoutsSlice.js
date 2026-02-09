@@ -1,50 +1,78 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { api, authFetch } from '../../utils/api';
 
-// Load workouts from localStorage
-const loadWorkouts = () => {
-    try {
-        const saved = localStorage.getItem('strenvy_workouts');
-        return saved ? JSON.parse(saved) : [];
-    } catch {
-        return [];
+export const fetchWorkouts = createAsyncThunk(
+    'workouts/fetchWorkouts',
+    async (_, { rejectWithValue }) => {
+        try {
+            const response = await authFetch(api.workouts);
+            if (!response.ok) throw new Error('Failed to fetch workout templates');
+            return await response.json();
+        } catch (error) {
+            return rejectWithValue(error.message);
+        }
     }
-};
+);
 
-// Save workouts to localStorage
-const saveWorkouts = (workouts) => {
-    localStorage.setItem('strenvy_workouts', JSON.stringify(workouts));
-};
+export const createWorkout = createAsyncThunk(
+    'workouts/createWorkout',
+    async (workoutData, { rejectWithValue }) => {
+        try {
+            const response = await authFetch(api.workouts, {
+                method: 'POST',
+                body: JSON.stringify(workoutData),
+            });
+            if (!response.ok) throw new Error('Failed to create workout template');
+            return await response.json();
+        } catch (error) {
+            return rejectWithValue(error.message);
+        }
+    }
+);
+
+export const editWorkout = createAsyncThunk(
+    'workouts/editWorkout',
+    async ({ id, ...updates }, { rejectWithValue }) => {
+        try {
+            const response = await authFetch(`${api.workouts}/${id}`, {
+                method: 'PUT',
+                body: JSON.stringify(updates),
+            });
+            if (!response.ok) throw new Error('Failed to update workout template');
+            return await response.json();
+        } catch (error) {
+            return rejectWithValue(error.message);
+        }
+    }
+);
+
+export const removeWorkout = createAsyncThunk(
+    'workouts/removeWorkout',
+    async (id, { rejectWithValue }) => {
+        try {
+            const response = await authFetch(`${api.workouts}/${id}`, {
+                method: 'DELETE',
+            });
+            if (!response.ok) throw new Error('Failed to delete workout template');
+            return id;
+        } catch (error) {
+            return rejectWithValue(error.message);
+        }
+    }
+);
 
 const initialState = {
-    items: loadWorkouts(),
+    items: [],
     currentWorkout: null,
     editingWorkout: null,
+    loading: false,
+    error: null,
 };
 
 const workoutsSlice = createSlice({
     name: 'workouts',
     initialState,
     reducers: {
-        addWorkout: (state, action) => {
-            const workout = {
-                ...action.payload,
-                id: Date.now().toString(),
-                createdAt: new Date().toISOString(),
-            };
-            state.items.push(workout);
-            saveWorkouts(state.items);
-        },
-        updateWorkout: (state, action) => {
-            const index = state.items.findIndex(w => w.id === action.payload.id);
-            if (index !== -1) {
-                state.items[index] = { ...state.items[index], ...action.payload };
-                saveWorkouts(state.items);
-            }
-        },
-        deleteWorkout: (state, action) => {
-            state.items = state.items.filter(w => w.id !== action.payload);
-            saveWorkouts(state.items);
-        },
         setCurrentWorkout: (state, action) => {
             state.currentWorkout = action.payload;
         },
@@ -55,12 +83,36 @@ const workoutsSlice = createSlice({
             state.editingWorkout = null;
         },
     },
+    extraReducers: (builder) => {
+        builder
+            .addCase(fetchWorkouts.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(fetchWorkouts.fulfilled, (state, action) => {
+                state.loading = false;
+                state.items = action.payload;
+            })
+            .addCase(fetchWorkouts.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload;
+            })
+            .addCase(createWorkout.fulfilled, (state, action) => {
+                state.items.push(action.payload);
+            })
+            .addCase(editWorkout.fulfilled, (state, action) => {
+                const index = state.items.findIndex(w => w.id === action.payload.id);
+                if (index !== -1) {
+                    state.items[index] = action.payload;
+                }
+            })
+            .addCase(removeWorkout.fulfilled, (state, action) => {
+                state.items = state.items.filter(w => w.id !== action.payload);
+            });
+    },
 });
 
 export const {
-    addWorkout,
-    updateWorkout,
-    deleteWorkout,
     setCurrentWorkout,
     setEditingWorkout,
     clearEditingWorkout,

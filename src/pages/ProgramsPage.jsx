@@ -11,15 +11,23 @@ import {
     Trash2,
     Star
 } from 'lucide-react';
-import { setActiveProgram, deleteProgram, setEditingProgram } from '../store/slices/programsSlice';
+import { setActiveProgram, removeProgram, setEditingProgram, fetchPrograms } from '../store/slices/programsSlice';
 import ProgramForm from '../components/programs/ProgramForm';
+import Loading from '../components/common/Loading';
 import './ProgramsPage.css';
+import { useEffect } from 'react';
 
 const ProgramsPage = memo(function ProgramsPage() {
     const dispatch = useDispatch();
-    const { adminPrograms, userPrograms, activeProgram } = useSelector(state => state.programs);
+    const { adminPrograms, userPrograms, activeProgram, loading, error } = useSelector(state => state.programs);
     const [showForm, setShowForm] = useState(false);
     const [editingId, setEditingId] = useState(null);
+
+    useEffect(() => {
+        dispatch(fetchPrograms());
+    }, [dispatch]);
+
+
 
     const handleStartProgram = useCallback((programId) => {
         dispatch(setActiveProgram(programId));
@@ -27,7 +35,7 @@ const ProgramsPage = memo(function ProgramsPage() {
 
     const handleDeleteProgram = useCallback((programId) => {
         if (window.confirm('Are you sure you want to delete this program?')) {
-            dispatch(deleteProgram(programId));
+            dispatch(removeProgram(programId));
         }
     }, [dispatch]);
 
@@ -51,6 +59,27 @@ const ProgramsPage = memo(function ProgramsPage() {
         };
         return colors[difficulty] || colors.beginner;
     };
+
+    if (loading && adminPrograms.length === 0 && userPrograms.length === 0) {
+        return <Loading text="Loading programs..." />;
+    }
+
+    if (error) {
+        return (
+            <div className="page programs-page">
+                <div className="container">
+                    <div className="error-container" style={{ textAlign: 'center', padding: '40px' }}>
+                        <h2>Oops! Something went wrong.</h2>
+                        <p className="text-muted">{error}</p>
+                        <button className="btn btn-primary" onClick={() => dispatch(fetchPrograms())}>
+                            Try Again
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
 
     return (
         <div className="page programs-page">
@@ -115,14 +144,14 @@ const ProgramsPage = memo(function ProgramsPage() {
                                     </span>
                                     <span>
                                         <Clock size={16} />
-                                        {program.daysPerWeek.length} days/week
+                                        {program.daysPerWeek?.length || 0} days/week
                                     </span>
                                 </div>
                                 <div className="program-days">
                                     {['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'].map(day => (
                                         <span
                                             key={day}
-                                            className={`day-dot ${program.daysPerWeek.some(d => d.startsWith(day)) ? 'active' : ''
+                                            className={`day-dot ${(program.daysPerWeek || []).some(d => d.startsWith(day)) ? 'active' : ''
                                                 }`}
                                             title={day}
                                         >

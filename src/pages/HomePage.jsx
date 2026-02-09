@@ -13,9 +13,17 @@ import {
 import './HomePage.css';
 
 const HomePage = memo(function HomePage() {
-    const { stats } = useSelector(state => state.progress);
+    const { stats = {} } = useSelector(state => state.progress);
     const { activeProgram } = useSelector(state => state.programs);
     const { isAuthenticated, currentUser } = useSelector(state => state.user);
+
+    // Default stats to avoid crashes
+    const safeStats = {
+        streak: stats?.streak || 0,
+        totalWorkouts: stats?.totalWorkouts || 0,
+        totalExercises: stats?.totalExercises || 0,
+        totalVolume: stats?.totalVolume || 0,
+    };
 
     const features = [
         {
@@ -75,22 +83,22 @@ const HomePage = memo(function HomePage() {
                         <div className="stats-grid">
                             <div className="stat-card">
                                 <Flame className="stat-icon" style={{ color: '#ef4444' }} />
-                                <div className="stat-value">{stats.streak}</div>
+                                <div className="stat-value">{safeStats.streak}</div>
                                 <div className="stat-label">Day Streak</div>
                             </div>
                             <div className="stat-card">
                                 <Target className="stat-icon" style={{ color: '#6366f1' }} />
-                                <div className="stat-value">{stats.totalWorkouts}</div>
+                                <div className="stat-value">{safeStats.totalWorkouts}</div>
                                 <div className="stat-label">Workouts</div>
                             </div>
                             <div className="stat-card">
                                 <Dumbbell className="stat-icon" style={{ color: '#8b5cf6' }} />
-                                <div className="stat-value">{stats.totalExercises}</div>
+                                <div className="stat-value">{safeStats.totalExercises}</div>
                                 <div className="stat-label">Exercises Done</div>
                             </div>
                             <div className="stat-card">
                                 <Clock className="stat-icon" style={{ color: '#22c55e' }} />
-                                <div className="stat-value">{Math.round(stats.totalVolume / 1000)}k</div>
+                                <div className="stat-value">{Math.round(safeStats.totalVolume / 1000)}k</div>
                                 <div className="stat-label">Total Volume (kg)</div>
                             </div>
                         </div>

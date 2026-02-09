@@ -1,30 +1,66 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { api, authFetch } from '../../utils/api';
 
-// Load progress from localStorage
-const loadProgress = () => {
-    try {
-        const saved = localStorage.getItem('strenvy_progress');
-        return saved ? JSON.parse(saved) : [];
-    } catch {
-        return [];
+export const fetchHistory = createAsyncThunk(
+    'progress/fetchHistory',
+    async (_, { rejectWithValue }) => {
+        try {
+            const response = await authFetch(api.history);
+            if (!response.ok) throw new Error('Failed to fetch workout history');
+            return await response.json();
+        } catch (error) {
+            return rejectWithValue(error.message);
+        }
     }
-};
+);
 
-const saveProgress = (progress) => {
-    localStorage.setItem('strenvy_progress', JSON.stringify(progress));
-};
+export const logWorkout = createAsyncThunk(
+    'progress/logWorkout',
+    async (workoutData, { rejectWithValue }) => {
+        try {
+            const response = await authFetch(api.history, {
+                method: 'POST',
+                body: JSON.stringify(workoutData),
+            });
+            if (!response.ok) throw new Error('Failed to log workout');
+            return await response.json();
+        } catch (error) {
+            return rejectWithValue(error.message);
+        }
+    }
+);
 
-const initialState = {
-    workoutHistory: loadProgress(),
-    stats: {
-        totalWorkouts: 0,
-        totalExercises: 0,
-        totalVolume: 0,
-        streak: 0,
-    },
-};
+export const updateWorkoutLog = createAsyncThunk(
+    'progress/updateWorkoutLog',
+    async ({ id, ...updates }, { rejectWithValue }) => {
+        try {
+            const response = await authFetch(`${api.history}/${id}`, {
+                method: 'PUT',
+                body: JSON.stringify(updates),
+            });
+            if (!response.ok) throw new Error('Failed to update workout log');
+            return await response.json();
+        } catch (error) {
+            return rejectWithValue(error.message);
+        }
+    }
+);
 
-// Calculate stats from workout history
+export const deleteWorkoutLog = createAsyncThunk(
+    'progress/deleteWorkoutLog',
+    async (id, { rejectWithValue }) => {
+        try {
+            const response = await authFetch(`${api.history}/${id}`, {
+                method: 'DELETE',
+            });
+            if (!response.ok) throw new Error('Failed to delete workout log');
+            return id;
+        } catch (error) {
+            return rejectWithValue(error.message);
+        }
+    }
+);
+
 const calculateStats = (history) => {
     const totalWorkouts = history.length;
     const totalExercises = history.reduce((acc, w) => acc + (w.exercises?.length || 0), 0);
@@ -34,7 +70,6 @@ const calculateStats = (history) => {
         }, 0) || 0);
     }, 0);
 
-    // Calculate streak
     let streak = 0;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -51,6 +86,13 @@ const calculateStats = (history) => {
 
         if (workoutDate.getTime() === expectedDate.getTime()) {
             streak++;
+        } else if (i === 0) {
+            expectedDate.setDate(today.getDate() - 1);
+            if (workoutDate.getTime() === expectedDate.getTime()) {
+                streak++;
+            } else {
+                break;
+            }
         } else {
             break;
         }
@@ -59,40 +101,55 @@ const calculateStats = (history) => {
     return { totalWorkouts, totalExercises, totalVolume, streak };
 };
 
+const initialState = {
+    workoutHistory: [],
+    stats: {
+        totalWorkouts: 0,
+        totalExercises: 0,
+        totalVolume: 0,
+        streak: 0,
+    },
+    loading: false,
+    error: null,
+};
+
 const progressSlice = createSlice({
     name: 'progress',
-    initialState: {
-        ...initialState,
-        stats: calculateStats(initialState.workoutHistory),
-    },
-    reducers: {
-        logWorkout: (state, action) => {
-            const entry = {
-                ...action.payload,
-                id: Date.now().toString(),
-                completedAt: new Date().toISOString(),
-            };
-            state.workoutHistory.push(entry);
-            state.stats = calculateStats(state.workoutHistory);
-            saveProgress(state.workoutHistory);
-        },
-        updateWorkoutLog: (state, action) => {
-            const index = state.workoutHistory.findIndex(w => w.id === action.payload.id);
-            if (index !== -1) {
-                state.workoutHistory[index] = { ...state.workoutHistory[index], ...action.payload };
+    initialState,
+    reducers: {},
+    extraReducers: (builder) => {
+        builder
+            .addCase(fetchHistory.pending, (state) => {
+                state.loading = true;
+            })
+            .addCase(fetchHistory.fulfilled, (state, action) => {
+                state.loading = false;
+                if (Array.isArray(action.payload)) {
+                    state.workoutHistory = action.payload;
+                    state.stats = calculateStats(action.payload);
+                } else {
+                    state.workoutHistory = [];
+                    state.stats = calculateStats([]);
+                }
+            })
+            .addCase(logWorkout.fulfilled, (state, action) => {
+                state.workoutHistory.push(action.payload);
                 state.stats = calculateStats(state.workoutHistory);
-                saveProgress(state.workoutHistory);
-            }
-        },
-        deleteWorkoutLog: (state, action) => {
-            state.workoutHistory = state.workoutHistory.filter(w => w.id !== action.payload);
-            state.stats = calculateStats(state.workoutHistory);
-            saveProgress(state.workoutHistory);
-        },
+            })
+            .addCase(updateWorkoutLog.fulfilled, (state, action) => {
+                const index = state.workoutHistory.findIndex(w => w.id === action.payload.id);
+                if (index !== -1) {
+                    state.workoutHistory[index] = action.payload;
+                    state.stats = calculateStats(state.workoutHistory);
+                }
+            })
+            .addCase(deleteWorkoutLog.fulfilled, (state, action) => {
+                state.workoutHistory = state.workoutHistory.filter(w => w.id !== action.payload);
+                state.stats = calculateStats(state.workoutHistory);
+            });
     },
 });
 
-// Selectors
 export const selectWorkoutsByDateRange = (state, startDate, endDate) => {
     return state.progress.workoutHistory.filter(w => {
         const date = new Date(w.completedAt);
@@ -111,5 +168,4 @@ export const selectMuscleGroupDistribution = (state) => {
     return distribution;
 };
 
-export const { logWorkout, updateWorkoutLog, deleteWorkoutLog } = progressSlice.actions;
 export default progressSlice.reducer;

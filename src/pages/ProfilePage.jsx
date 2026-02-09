@@ -10,14 +10,15 @@ import {
     Check,
     Shield
 } from 'lucide-react';
-import { login, loginAsAdmin, logout, updateProfile, updatePreferences, setGoals } from '../store/slices/userSlice';
+import { logoutUser, updateUserProfile, updateUserPreferences, setUserGoals, clearError } from '../store/slices/userSlice';
 import './ProfilePage.css';
 
 const ProfilePage = memo(function ProfilePage() {
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const location = useLocation();
-    const { currentUser, isAuthenticated, isAdmin, preferences } = useSelector(state => state.user);
+    const { currentUser, isAuthenticated, isAdmin, loading, error } = useSelector(state => state.user);
+    const preferences = currentUser?.preferences || { units: 'metric', theme: 'light' };
 
     const [formData, setFormData] = useState({
         name: currentUser?.name || '',
@@ -33,43 +34,22 @@ const ProfilePage = memo(function ProfilePage() {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
         setSaved(false);
-    }, []);
+        if (error) dispatch(clearError());
+    }, [error, dispatch]);
 
-    const handleLogin = useCallback(() => {
-        if (!formData.name.trim()) return;
+    // Auth handlers moved to LoginPage/RegisterPage
 
-        dispatch(login({
-            id: Date.now().toString(),
-            name: formData.name,
-            email: formData.email,
-            createdAt: new Date().toISOString(),
-        }));
-
-        const from = location.state?.from?.pathname || '/';
-        navigate(from, { replace: true });
-    }, [formData, dispatch, navigate, location]);
-
-    const handleAdminLogin = useCallback(() => {
-        dispatch(loginAsAdmin({
-            id: 'admin-' + Date.now().toString(),
-            name: 'Admin',
-            email: 'admin@strenvy.com',
-            createdAt: new Date().toISOString(),
-        }));
-
-        navigate('/admin', { replace: true });
+    const handleLogout = useCallback(async () => {
+        await dispatch(logoutUser());
+        navigate('/login');
     }, [dispatch, navigate]);
 
-    const handleLogout = useCallback(() => {
-        dispatch(logout());
-    }, [dispatch]);
-
     const handleSaveProfile = useCallback(() => {
-        dispatch(updateProfile({
+        dispatch(updateUserProfile({
             name: formData.name,
             email: formData.email,
         }));
-        dispatch(setGoals({
+        dispatch(setUserGoals({
             type: formData.goalType,
             targetWeight: formData.goalWeight,
             workoutsPerWeek: formData.goalWorkoutsPerWeek,
@@ -79,73 +59,11 @@ const ProfilePage = memo(function ProfilePage() {
     }, [formData, dispatch]);
 
     const handlePreferenceChange = useCallback((key, value) => {
-        dispatch(updatePreferences({ [key]: value }));
+        dispatch(updateUserPreferences({ [key]: value }));
     }, [dispatch]);
 
-    // Not logged in - show signup/login form
-    if (!isAuthenticated) {
-        return (
-            <div className="page profile-page">
-                <div className="container">
-                    <div className="auth-container">
-                        <div className="auth-card">
-                            <div className="auth-header">
-                                <User size={40} />
-                                <h1>Get Started with Strenvy</h1>
-                                <p>Create your profile to track workouts and progress</p>
-                            </div>
-
-                            <div className="auth-form">
-                                <div className="input-group">
-                                    <label className="input-label">Your Name *</label>
-                                    <input
-                                        type="text"
-                                        name="name"
-                                        className="input"
-                                        placeholder="Enter your name"
-                                        value={formData.name}
-                                        onChange={handleInputChange}
-                                    />
-                                </div>
-
-                                <div className="input-group">
-                                    <label className="input-label">Email (optional)</label>
-                                    <input
-                                        type="email"
-                                        name="email"
-                                        className="input"
-                                        placeholder="your@email.com"
-                                        value={formData.email}
-                                        onChange={handleInputChange}
-                                    />
-                                </div>
-
-                                <button
-                                    className="btn btn-primary btn-lg"
-                                    onClick={handleLogin}
-                                    disabled={!formData.name.trim()}
-                                >
-                                    Start Training
-                                </button>
-
-                                <div className="auth-divider">
-                                    <span>or</span>
-                                </div>
-
-                                <button
-                                    className="btn btn-secondary btn-admin"
-                                    onClick={handleAdminLogin}
-                                >
-                                    <Shield size={18} />
-                                    Login as Admin
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
-    }
+    // Not logged in - should be handled by PrivateRoute but double check
+    if (!isAuthenticated) return null;
 
     // Logged in - show profile settings
     return (
@@ -173,11 +91,11 @@ const ProfilePage = memo(function ProfilePage() {
                 </div>
 
                 <div className="profile-grid">
-                    {/* Profile Info */}
+                    {/* Account Settings */}
                     <div className="profile-section">
                         <h2>
                             <User size={20} />
-                            Profile Information
+                            Account Settings
                         </h2>
 
                         <div className="input-group">
@@ -186,7 +104,7 @@ const ProfilePage = memo(function ProfilePage() {
                                 type="text"
                                 name="name"
                                 className="input"
-                                value={formData.name}
+                                value={formData.name || ''}
                                 onChange={handleInputChange}
                             />
                         </div>
@@ -197,8 +115,9 @@ const ProfilePage = memo(function ProfilePage() {
                                 type="email"
                                 name="email"
                                 className="input"
-                                value={formData.email}
+                                value={formData.email || ''}
                                 onChange={handleInputChange}
+                                disabled
                             />
                         </div>
                     </div>
@@ -261,23 +180,6 @@ const ProfilePage = memo(function ProfilePage() {
                             >
                                 <option value="metric">Metric (kg)</option>
                                 <option value="imperial">Imperial (lbs)</option>
-                            </select>
-                        </div>
-
-                        <div className="preference-item">
-                            <div className="preference-info">
-                                <span className="preference-label">Theme</span>
-                                <span className="preference-description">
-                                    Dark mode for comfortable viewing
-                                </span>
-                            </div>
-                            <select
-                                className="input select"
-                                value={preferences.theme}
-                                onChange={(e) => handlePreferenceChange('theme', e.target.value)}
-                            >
-                                <option value="dark">Dark</option>
-                                <option value="light">Light</option>
                             </select>
                         </div>
                     </div>

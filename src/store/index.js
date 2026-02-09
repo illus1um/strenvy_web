@@ -4,6 +4,7 @@ import workoutsReducer from './slices/workoutsSlice';
 import programsReducer from './slices/programsSlice';
 import progressReducer from './slices/progressSlice';
 import userReducer from './slices/userSlice';
+import usersReducer from './slices/usersSlice';
 
 export const store = configureStore({
     reducer: {
@@ -12,6 +13,7 @@ export const store = configureStore({
         programs: programsReducer,
         progress: progressReducer,
         user: userReducer,
+        users: usersReducer,
     },
     middleware: (getDefaultMiddleware) =>
         getDefaultMiddleware({

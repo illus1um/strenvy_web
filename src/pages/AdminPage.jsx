@@ -15,11 +15,18 @@ import {
     Shield
 } from 'lucide-react';
 import {
-    addAdminProgram,
-    updateAdminProgram,
-    deleteAdminProgram
+    createProgram,
+    editProgram,
+    removeProgram
 } from '../store/slices/programsSlice';
 import { fetchExercises } from '../store/slices/exercisesSlice';
+import {
+    fetchUsers,
+    createUser,
+    updateUser,
+    deleteUser
+} from '../store/slices/usersSlice';
+import Loading from '../components/common/Loading';
 import './AdminPage.css';
 
 const DAYS = [
@@ -34,13 +41,20 @@ const DAYS = [
 
 const AdminPage = memo(function AdminPage() {
     const dispatch = useDispatch();
-    const { adminPrograms, userPrograms } = useSelector(state => state.programs);
+    const { adminPrograms, userPrograms, loading } = useSelector(state => state.programs);
     const { filtered: exercises } = useSelector(state => state.exercises);
+    const { users } = useSelector(state => state.users);
     const { currentUser } = useSelector(state => state.user);
+
+    if (loading && adminPrograms.length === 0) {
+        return <Loading text="Loading admin panel..." />;
+    }
 
     const [activeTab, setActiveTab] = useState('programs');
     const [showForm, setShowForm] = useState(false);
+    const [showUserForm, setShowUserForm] = useState(false);
     const [editingProgram, setEditingProgram] = useState(null);
+    const [editingUser, setEditingUser] = useState(null);
     const [expandedProgram, setExpandedProgram] = useState(null);
 
     // Form state
@@ -53,15 +67,29 @@ const AdminPage = memo(function AdminPage() {
         schedule: {},
     });
 
+    // User Form state
+    const [userFormData, setUserFormData] = useState({
+        name: '',
+        email: '',
+        password: '',
+        role: 'user',
+    });
+
     useEffect(() => {
         if (exercises.length === 0) {
             dispatch(fetchExercises());
         }
+        dispatch(fetchUsers());
     }, [dispatch, exercises.length]);
 
     const handleInputChange = useCallback((e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
+    }, []);
+
+    const handleUserInputChange = useCallback((e) => {
+        const { name, value } = e.target;
+        setUserFormData(prev => ({ ...prev, [name]: value }));
     }, []);
 
     const handleDayToggle = useCallback((day) => {
@@ -95,9 +123,26 @@ const AdminPage = memo(function AdminPage() {
         setShowForm(true);
     }, []);
 
+    const handleEditUser = useCallback((user) => {
+        setEditingUser(user);
+        setUserFormData({
+            name: user.name,
+            email: user.email,
+            password: '', // Don't show password
+            role: user.role,
+        });
+        setShowUserForm(true);
+    }, []);
+
     const handleDeleteProgram = useCallback((programId) => {
         if (window.confirm('Are you sure you want to delete this program?')) {
-            dispatch(deleteAdminProgram(programId));
+            dispatch(removeProgram(programId));
+        }
+    }, [dispatch]);
+
+    const handleDeleteUser = useCallback((userId) => {
+        if (window.confirm('Are you sure you want to delete this user?')) {
+            dispatch(deleteUser(userId));
         }
     }, [dispatch]);
 
@@ -105,12 +150,16 @@ const AdminPage = memo(function AdminPage() {
         if (!formData.name.trim()) return;
 
         if (editingProgram) {
-            dispatch(updateAdminProgram({
+            dispatch(editProgram({
                 id: editingProgram.id,
                 ...formData,
+                isAdmin: true
             }));
         } else {
-            dispatch(addAdminProgram(formData));
+            dispatch(createProgram({
+                ...formData,
+                isAdmin: true
+            }));
         }
 
         setShowForm(false);
@@ -138,6 +187,46 @@ const AdminPage = memo(function AdminPage() {
         });
     }, []);
 
+    const handleUserSubmit = useCallback(() => {
+        if (!userFormData.name.trim() || !userFormData.email.trim()) return;
+
+        if (editingUser) {
+            const updates = {
+                id: editingUser.id,
+                name: userFormData.name,
+                role: userFormData.role,
+            };
+            // Only send password if entered
+            if (userFormData.password) {
+                updates.password = userFormData.password;
+            }
+            dispatch(updateUser(updates));
+        } else {
+            if (!userFormData.password) return; // Password required for new user
+            dispatch(createUser(userFormData));
+        }
+
+        setShowUserForm(false);
+        setEditingUser(null);
+        setUserFormData({
+            name: '',
+            email: '',
+            password: '',
+            role: 'user',
+        });
+    }, [userFormData, editingUser, dispatch]);
+
+    const handleCloseUserForm = useCallback(() => {
+        setShowUserForm(false);
+        setEditingUser(null);
+        setUserFormData({
+            name: '',
+            email: '',
+            password: '',
+            role: 'user',
+        });
+    }, []);
+
     const getDifficultyColor = (difficulty) => {
         const colors = {
             beginner: '#22c55e',
@@ -151,7 +240,9 @@ const AdminPage = memo(function AdminPage() {
     const stats = {
         totalPrograms: adminPrograms.length,
         totalUserPrograms: userPrograms.length,
+        totalUserPrograms: userPrograms.length,
         totalExercises: exercises.length,
+        totalUsers: users.length,
     };
 
     return (
@@ -207,6 +298,13 @@ const AdminPage = memo(function AdminPage() {
                     >
                         <Dumbbell size={18} />
                         Exercises
+                    </button>
+                    <button
+                        className={`tab ${activeTab === 'users' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('users')}
+                    >
+                        <Users size={18} />
+                        Users
                     </button>
                 </div>
 
@@ -411,9 +509,90 @@ const AdminPage = memo(function AdminPage() {
                             </div>
                         </div>
                     </div>
+
+                )}
+
+                {/* User Form Modal */}
+                {showUserForm && (
+                    <div className="modal-overlay" onClick={handleCloseUserForm}>
+                        <div className="modal admin-form-modal" onClick={e => e.stopPropagation()}>
+                            <div className="modal-header">
+                                <h2>{editingUser ? 'Edit User' : 'Add User'}</h2>
+                                <button className="btn btn-ghost btn-icon" onClick={handleCloseUserForm}>
+                                    <X size={20} />
+                                </button>
+                            </div>
+                            <div className="modal-body">
+                                <div className="input-group">
+                                    <label className="input-label">Name *</label>
+                                    <input
+                                        type="text"
+                                        name="name"
+                                        className="input"
+                                        placeholder="John Doe"
+                                        value={userFormData.name}
+                                        onChange={handleUserInputChange}
+                                    />
+                                </div>
+
+                                <div className="input-group">
+                                    <label className="input-label">Email *</label>
+                                    <input
+                                        type="email"
+                                        name="email"
+                                        className="input"
+                                        placeholder="john@example.com"
+                                        value={userFormData.email}
+                                        onChange={handleUserInputChange}
+                                        disabled={!!editingUser} // Email is unique identifierish
+                                    />
+                                </div>
+
+                                <div className="input-group">
+                                    <label className="input-label">
+                                        {editingUser ? 'New Password (leave blank to keep current)' : 'Password *'}
+                                    </label>
+                                    <input
+                                        type="password"
+                                        name="password"
+                                        className="input"
+                                        placeholder="******"
+                                        value={userFormData.password}
+                                        onChange={handleUserInputChange}
+                                    />
+                                </div>
+
+                                <div className="input-group">
+                                    <label className="input-label">Role</label>
+                                    <select
+                                        name="role"
+                                        className="input select"
+                                        value={userFormData.role}
+                                        onChange={handleUserInputChange}
+                                    >
+                                        <option value="user">User</option>
+                                        <option value="admin">Admin</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="modal-footer">
+                                <button className="btn btn-ghost" onClick={handleCloseUserForm}>
+                                    Cancel
+                                </button>
+                                <button
+                                    className="btn btn-primary"
+                                    onClick={handleUserSubmit}
+                                    disabled={!userFormData.name.trim() || (!editingUser && !userFormData.password)}
+                                >
+                                    <Save size={18} />
+                                    {editingUser ? 'Save Changes' : 'Create User'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 )}
             </div>
-        </div>
+        </div >
     );
 });
 

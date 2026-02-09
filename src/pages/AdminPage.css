@@ -260,3 +260,18 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* User Avatar Placeholder */
+.user-avatar-placeholder {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--color-accent-primary);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.25rem;
+    margin-right: 1rem;
+}

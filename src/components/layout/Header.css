@@ -2,9 +2,11 @@
     position: sticky;
     top: 0;
     z-index: 100;
-    background: rgba(10, 10, 15, 0.8);
+    background: var(--color-bg-primary);
+    opacity: 0.95;
     backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--color-border);
+    transition: background var(--transition-base), border var(--transition-base);
 }
 
 .header-container {
@@ -75,6 +77,12 @@
     display: flex;
     align-items: center;
     gap: 0.75rem;
+}
+
+.user-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 .user-avatar {

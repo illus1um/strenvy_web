@@ -1,5 +1,7 @@
 import React, { memo, useMemo } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import { fetchHistory } from '../store/slices/progressSlice';
+import { useEffect } from 'react';
 import {
     Flame,
     Target,
@@ -37,9 +39,27 @@ ChartJS.register(
     Filler
 );
 
+import Loading from '../components/common/Loading';
+
+// ... (other imports)
+
 const ProgressPage = memo(function ProgressPage() {
-    const { workoutHistory, stats } = useSelector(state => state.progress);
+    const dispatch = useDispatch();
+    const { workoutHistory, stats = {}, loading, error } = useSelector(state => state.progress);
     const { isAuthenticated } = useSelector(state => state.user);
+
+    const safeStats = {
+        streak: stats?.streak || 0,
+        totalWorkouts: stats?.totalWorkouts || 0,
+        totalExercises: stats?.totalExercises || 0,
+        totalVolume: stats?.totalVolume || 0,
+    };
+
+    useEffect(() => {
+        if (isAuthenticated) {
+            dispatch(fetchHistory());
+        }
+    }, [dispatch, isAuthenticated]);
 
     // Calculate workout frequency by week
     const weeklyData = useMemo(() => {
@@ -80,6 +100,23 @@ const ProgressPage = memo(function ProgressPage() {
         return distribution;
     }, [workoutHistory]);
 
+    if (loading && workoutHistory.length === 0) {
+        return <Loading text="Loading your progress..." />;
+    }
+
+    if (error) {
+        return (
+            <div className="page progress-page">
+                <div className="container">
+                    <div className="error-container" style={{ textAlign: 'center', padding: '40px' }}>
+                        <p style={{ color: '#ef4444' }}>Error loading data: {error}</p>
+                        <button className="btn btn-ghost" onClick={() => dispatch(fetchHistory())}>Retry</button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     // Chart configurations
     const lineChartData = {
         labels: weeklyData.map(w => w.label),
@@ -87,12 +124,12 @@ const ProgressPage = memo(function ProgressPage() {
             {
                 label: 'Workouts',
                 data: weeklyData.map(w => w.count),
-                borderColor: '#6366f1',
-                backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                borderColor: '#fbbf24',
+                backgroundColor: 'rgba(251, 191, 36, 0.1)',
                 fill: true,
                 tension: 0.4,
-                pointBackgroundColor: '#6366f1',
-                pointBorderColor: '#fff',
+                pointBackgroundColor: '#fbbf24',
+                pointBorderColor: '#000',
                 pointBorderWidth: 2,
                 pointRadius: 4,
             },
@@ -104,6 +141,13 @@ const ProgressPage = memo(function ProgressPage() {
         maintainAspectRatio: false,
         plugins: {
             legend: { display: false },
+            tooltip: {
+                backgroundColor: '#1a1a24',
+                titleColor: '#ffffff',
+                bodyColor: '#a1a1aa',
+                borderColor: 'rgba(255, 255, 255, 0.1)',
+                borderWidth: 1,
+            }
         },
         scales: {
             y: {
@@ -124,14 +168,14 @@ const ProgressPage = memo(function ProgressPage() {
             {
                 data: Object.values(muscleDistribution),
                 backgroundColor: [
-                    '#6366f1',
-                    '#8b5cf6',
-                    '#22c55e',
-                    '#f59e0b',
-                    '#ef4444',
-                    '#3b82f6',
-                    '#ec4899',
-                    '#14b8a6',
+                    '#fbbf24', // Amber 400
+                    '#d97706', // Amber 600
+                    '#f59e0b', // Amber 500
+                    '#b45309', // Amber 700
+                    '#fffbeb', // Amber 50
+                    '#fde68a', // Amber 200
+                    '#78350f', // Amber 900
+                    '#92400e', // Amber 800
                 ],
                 borderWidth: 0,
             },
@@ -180,27 +224,27 @@ const ProgressPage = memo(function ProgressPage() {
                             <Flame size={24} style={{ color: '#ef4444' }} />
                         </div>
                         <div className="stat-info">
-                            <span className="stat-value">{stats.streak}</span>
+                            <span className="stat-value">{safeStats.streak}</span>
                             <span className="stat-label">Day Streak</span>
                         </div>
                     </div>
 
                     <div className="stat-card">
-                        <div className="stat-icon-wrapper" style={{ backgroundColor: 'rgba(99, 102, 241, 0.15)' }}>
-                            <Target size={24} style={{ color: '#6366f1' }} />
+                        <div className="stat-icon-wrapper" style={{ backgroundColor: 'rgba(251, 191, 36, 0.15)' }}>
+                            <Target size={24} style={{ color: '#fbbf24' }} />
                         </div>
                         <div className="stat-info">
-                            <span className="stat-value">{stats.totalWorkouts}</span>
+                            <span className="stat-value">{safeStats.totalWorkouts}</span>
                             <span className="stat-label">Total Workouts</span>
                         </div>
                     </div>
 
                     <div className="stat-card">
-                        <div className="stat-icon-wrapper" style={{ backgroundColor: 'rgba(139, 92, 246, 0.15)' }}>
-                            <Dumbbell size={24} style={{ color: '#8b5cf6' }} />
+                        <div className="stat-icon-wrapper" style={{ backgroundColor: 'rgba(217, 119, 6, 0.15)' }}>
+                            <Dumbbell size={24} style={{ color: '#d97706' }} />
                         </div>
                         <div className="stat-info">
-                            <span className="stat-value">{stats.totalExercises}</span>
+                            <span className="stat-value">{safeStats.totalExercises}</span>
                             <span className="stat-label">Exercises Done</span>
                         </div>
                     </div>
@@ -210,7 +254,7 @@ const ProgressPage = memo(function ProgressPage() {
                             <TrendingUp size={24} style={{ color: '#22c55e' }} />
                         </div>
                         <div className="stat-info">
-                            <span className="stat-value">{Math.round(stats.totalVolume / 1000)}k</span>
+                            <span className="stat-value">{Math.round(safeStats.totalVolume / 1000)}k</span>
                             <span className="stat-label">Total Volume (kg)</span>
                         </div>
                     </div>

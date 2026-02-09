@@ -1,4 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { api } from '../../utils/api';
 
 // Helper to extract image ID from URL
 const getImageId = (url) => {
@@ -12,12 +13,9 @@ export const fetchExercises = createAsyncThunk(
     'exercises/fetchExercises',
     async (_, { rejectWithValue }) => {
         try {
-            const response = await import('../../data/exercises.json');
-            return response.default.map(exercise => ({
-                ...exercise,
-                localGif: `/gifs/${getImageId(exercise.gifUrl)}.gif`,
-                localPng: `/gifs/${getImageId(exercise.gifUrl)}.png`,
-            }));
+            const response = await fetch(api.exercises);
+            if (!response.ok) throw new Error('Failed to fetch exercises');
+            return await response.json();
         } catch (error) {
             return rejectWithValue(error.message);
         }

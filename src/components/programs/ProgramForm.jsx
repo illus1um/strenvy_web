@@ -11,7 +11,7 @@ import {
     Search,
     Eye
 } from 'lucide-react';
-import { addProgram, updateProgram, setEditingProgram } from '../../store/slices/programsSlice';
+import { createProgram, editProgram, setEditingProgram } from '../../store/slices/programsSlice';
 import { fetchExercises, setFilter } from '../../store/slices/exercisesSlice';
 import './ProgramForm.css';
 
@@ -279,9 +279,9 @@ const ProgramForm = memo(function ProgramForm({ onClose, editingId }) {
         };
 
         if (editingId) {
-            dispatch(updateProgram(programData));
+            dispatch(editProgram(programData));
         } else {
-            dispatch(addProgram(programData));
+            dispatch(createProgram(programData));
         }
 
         onClose();
