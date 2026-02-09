@@ -8,6 +8,8 @@ import Loading from './components/common/Loading';
 import PrivateRoute from './components/common/PrivateRoute';
 import AdminRoute from './components/common/AdminRoute';
 import { checkAuth } from './store/slices/userSlice';
+import { fetchPrograms } from './store/slices/programsSlice';
+import { fetchHistory } from './store/slices/progressSlice';
 import './index.css';
 
 // Lazy loaded pages
@@ -22,15 +24,23 @@ const RegisterPage = lazy(() => import('./pages/RegisterPage'));
 const VerifyEmailPage = lazy(() => import('./pages/VerifyEmailPage'));
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
+const WorkoutSessionPage = lazy(() => import('./pages/WorkoutSessionPage'));
 
 function AppContent() {
   const dispatch = useDispatch();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { currentUser } = useSelector(state => state.user);
+  const { currentUser, isAuthenticated } = useSelector(state => state.user);
 
   useEffect(() => {
     dispatch(checkAuth());
   }, [dispatch]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      dispatch(fetchPrograms());
+      dispatch(fetchHistory());
+    }
+  }, [dispatch, isAuthenticated]);
 
   const handleMenuToggle = useCallback(() => {
     setIsMenuOpen(prev => !prev);
@@ -55,6 +65,14 @@ function AppContent() {
             <Route path="/verify-email" element={<VerifyEmailPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route
+              path="/session"
+              element={
+                <PrivateRoute>
+                  <WorkoutSessionPage />
+                </PrivateRoute>
+              }
+            />
             <Route
               path="/exercises"
               element={

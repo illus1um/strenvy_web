@@ -240,7 +240,6 @@ const AdminPage = memo(function AdminPage() {
     const stats = {
         totalPrograms: adminPrograms.length,
         totalUserPrograms: userPrograms.length,
-        totalUserPrograms: userPrograms.length,
         totalExercises: exercises.length,
         totalUsers: users.length,
     };

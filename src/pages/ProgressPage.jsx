@@ -1,4 +1,4 @@
-import React, { memo, useMemo } from 'react';
+import React, { memo, useMemo, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { fetchHistory } from '../store/slices/progressSlice';
 import { useEffect } from 'react';
@@ -8,7 +8,7 @@ import {
     Dumbbell,
     TrendingUp,
     Calendar,
-    Activity
+    Activity,
 } from 'lucide-react';
 import {
     Chart as ChartJS,
@@ -23,7 +23,7 @@ import {
     Legend,
     Filler,
 } from 'chart.js';
-import { Line, Doughnut, Bar } from 'react-chartjs-2';
+import { Line, Doughnut } from 'react-chartjs-2';
 import './ProgressPage.css';
 
 ChartJS.register(
@@ -41,12 +41,32 @@ ChartJS.register(
 
 import Loading from '../components/common/Loading';
 
-// ... (other imports)
+const TIME_FILTERS = [
+    { key: 'week', label: 'This Week' },
+    { key: 'month', label: 'This Month' },
+    { key: 'all', label: 'All Time' },
+];
+
+const getWorkoutVolume = (workout) => {
+    return workout.exercises?.reduce((acc, e) => {
+        if (Array.isArray(e.sets)) {
+            return acc + e.sets.reduce((sAcc, s) => sAcc + (s.weight || 0) * (s.reps || 0), 0);
+        }
+        return acc + (e.weight || 0) * (e.reps || 0) * (e.sets || 0);
+    }, 0) || 0;
+};
+
+const formatDuration = (seconds) => {
+    if (!seconds) return null;
+    const m = Math.floor(seconds / 60);
+    return `${m} min`;
+};
 
 const ProgressPage = memo(function ProgressPage() {
     const dispatch = useDispatch();
     const { workoutHistory, stats = {}, loading, error } = useSelector(state => state.progress);
     const { isAuthenticated } = useSelector(state => state.user);
+    const [timeFilter, setTimeFilter] = useState('all');
 
     const safeStats = {
         streak: stats?.streak || 0,
@@ -61,7 +81,25 @@ const ProgressPage = memo(function ProgressPage() {
         }
     }, [dispatch, isAuthenticated]);
 
-    // Calculate workout frequency by week
+    // Filter history by time period
+    const filteredHistory = useMemo(() => {
+        if (timeFilter === 'all') return workoutHistory;
+
+        const now = new Date();
+        let startDate;
+
+        if (timeFilter === 'week') {
+            startDate = new Date(now);
+            startDate.setDate(now.getDate() - now.getDay());
+            startDate.setHours(0, 0, 0, 0);
+        } else if (timeFilter === 'month') {
+            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        }
+
+        return workoutHistory.filter(w => new Date(w.completedAt) >= startDate);
+    }, [workoutHistory, timeFilter]);
+
+    // Weekly volume + workout count
     const weeklyData = useMemo(() => {
         const weeks = [];
         const now = new Date();
@@ -74,31 +112,40 @@ const ProgressPage = memo(function ProgressPage() {
             const weekEnd = new Date(weekStart);
             weekEnd.setDate(weekStart.getDate() + 7);
 
-            const count = workoutHistory.filter(w => {
+            const weekWorkouts = workoutHistory.filter(w => {
                 const date = new Date(w.completedAt);
                 return date >= weekStart && date < weekEnd;
-            }).length;
+            });
+
+            const volume = weekWorkouts.reduce((acc, w) => acc + getWorkoutVolume(w), 0);
 
             weeks.push({
                 label: `Week ${8 - i}`,
-                count,
+                count: weekWorkouts.length,
+                volume: Math.round(volume),
             });
         }
 
         return weeks;
     }, [workoutHistory]);
 
-    // Calculate muscle group distribution
+    // Muscle group distribution with secondary muscles + time filter
     const muscleDistribution = useMemo(() => {
         const distribution = {};
-        workoutHistory.forEach(workout => {
+        filteredHistory.forEach(workout => {
             workout.exercises?.forEach(exercise => {
-                const target = exercise.target || 'other';
+                const target = exercise.target || exercise.bodyPart || 'other';
                 distribution[target] = (distribution[target] || 0) + 1;
+
+                if (Array.isArray(exercise.secondaryMuscles)) {
+                    exercise.secondaryMuscles.forEach(muscle => {
+                        distribution[muscle] = (distribution[muscle] || 0) + 0.5;
+                    });
+                }
             });
         });
         return distribution;
-    }, [workoutHistory]);
+    }, [filteredHistory]);
 
     if (loading && workoutHistory.length === 0) {
         return <Loading text="Loading your progress..." />;
@@ -117,13 +164,12 @@ const ProgressPage = memo(function ProgressPage() {
         );
     }
 
-    // Chart configurations
     const lineChartData = {
         labels: weeklyData.map(w => w.label),
         datasets: [
             {
-                label: 'Workouts',
-                data: weeklyData.map(w => w.count),
+                label: 'Volume (kg)',
+                data: weeklyData.map(w => w.volume),
                 borderColor: '#fbbf24',
                 backgroundColor: 'rgba(251, 191, 36, 0.1)',
                 fill: true,
@@ -132,6 +178,20 @@ const ProgressPage = memo(function ProgressPage() {
                 pointBorderColor: '#000',
                 pointBorderWidth: 2,
                 pointRadius: 4,
+                yAxisID: 'y',
+            },
+            {
+                label: 'Workouts',
+                data: weeklyData.map(w => w.count),
+                borderColor: '#8b5cf6',
+                backgroundColor: 'transparent',
+                fill: false,
+                tension: 0.4,
+                pointBackgroundColor: '#8b5cf6',
+                pointBorderColor: '#000',
+                pointBorderWidth: 2,
+                pointRadius: 4,
+                yAxisID: 'y1',
             },
         ],
     };
@@ -139,8 +199,11 @@ const ProgressPage = memo(function ProgressPage() {
     const lineChartOptions = {
         responsive: true,
         maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
         plugins: {
-            legend: { display: false },
+            legend: {
+                labels: { color: '#a1a1aa', usePointStyle: true },
+            },
             tooltip: {
                 backgroundColor: '#1a1a24',
                 titleColor: '#ffffff',
@@ -152,8 +215,17 @@ const ProgressPage = memo(function ProgressPage() {
         scales: {
             y: {
                 beginAtZero: true,
+                position: 'left',
                 grid: { color: 'rgba(255, 255, 255, 0.05)' },
                 ticks: { color: '#71717a' },
+                title: { display: true, text: 'Volume (kg)', color: '#71717a' },
+            },
+            y1: {
+                beginAtZero: true,
+                position: 'right',
+                grid: { drawOnChartArea: false },
+                ticks: { color: '#71717a', stepSize: 1 },
+                title: { display: true, text: 'Workouts', color: '#71717a' },
             },
             x: {
                 grid: { display: false },
@@ -163,19 +235,14 @@ const ProgressPage = memo(function ProgressPage() {
     };
 
     const doughnutData = {
-        labels: Object.keys(muscleDistribution),
+        labels: Object.keys(muscleDistribution).map(k => k.charAt(0).toUpperCase() + k.slice(1)),
         datasets: [
             {
                 data: Object.values(muscleDistribution),
                 backgroundColor: [
-                    '#fbbf24', // Amber 400
-                    '#d97706', // Amber 600
-                    '#f59e0b', // Amber 500
-                    '#b45309', // Amber 700
-                    '#fffbeb', // Amber 50
-                    '#fde68a', // Amber 200
-                    '#78350f', // Amber 900
-                    '#92400e', // Amber 800
+                    '#fbbf24', '#d97706', '#f59e0b', '#b45309',
+                    '#6366f1', '#8b5cf6', '#22c55e', '#ef4444',
+                    '#ec4899', '#14b8a6', '#f97316', '#06b6d4',
                 ],
                 borderWidth: 0,
             },
@@ -188,7 +255,7 @@ const ProgressPage = memo(function ProgressPage() {
         plugins: {
             legend: {
                 position: 'right',
-                labels: { color: '#a1a1aa', padding: 20 },
+                labels: { color: '#a1a1aa', padding: 16, font: { size: 12 } },
             },
         },
     };
@@ -265,7 +332,7 @@ const ProgressPage = memo(function ProgressPage() {
                     <div className="chart-card">
                         <h3>
                             <Calendar size={18} />
-                            Weekly Activity
+                            Weekly Activity & Volume
                         </h3>
                         <div className="chart-container">
                             {workoutHistory.length > 0 ? (
@@ -279,10 +346,23 @@ const ProgressPage = memo(function ProgressPage() {
                     </div>
 
                     <div className="chart-card">
-                        <h3>
-                            <Activity size={18} />
-                            Muscle Group Distribution
-                        </h3>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                            <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <Activity size={18} />
+                                Muscle Groups
+                            </h3>
+                            <div className="time-filter">
+                                {TIME_FILTERS.map(f => (
+                                    <button
+                                        key={f.key}
+                                        className={`filter-btn ${timeFilter === f.key ? 'active' : ''}`}
+                                        onClick={() => setTimeFilter(f.key)}
+                                    >
+                                        {f.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
                         <div className="chart-container">
                             {Object.keys(muscleDistribution).length > 0 ? (
                                 <Doughnut data={doughnutData} options={doughnutOptions} />
@@ -304,23 +384,29 @@ const ProgressPage = memo(function ProgressPage() {
                         </div>
                     ) : (
                         <div className="workouts-list">
-                            {workoutHistory.slice(-5).reverse().map(workout => (
-                                <div key={workout.id} className="workout-item">
-                                    <div className="workout-date">
-                                        {new Date(workout.completedAt).toLocaleDateString('en-US', {
-                                            weekday: 'short',
-                                            month: 'short',
-                                            day: 'numeric',
-                                        })}
+                            {workoutHistory.slice(-5).reverse().map(workout => {
+                                const volume = getWorkoutVolume(workout);
+                                const duration = formatDuration(workout.duration);
+                                return (
+                                    <div key={workout.id} className="workout-item">
+                                        <div className="workout-date">
+                                            {new Date(workout.completedAt).toLocaleDateString('en-US', {
+                                                weekday: 'short',
+                                                month: 'short',
+                                                day: 'numeric',
+                                            })}
+                                        </div>
+                                        <div className="workout-details">
+                                            <span className="workout-name">{workout.name || 'Workout'}</span>
+                                            <span className="workout-exercises">
+                                                {workout.exercises?.length || 0} exercises
+                                                {volume > 0 && ` · ${Math.round(volume)} kg`}
+                                                {duration && ` · ${duration}`}
+                                            </span>
+                                        </div>
                                     </div>
-                                    <div className="workout-details">
-                                        <span className="workout-name">{workout.name || 'Workout'}</span>
-                                        <span className="workout-exercises">
-                                            {workout.exercises?.length || 0} exercises
-                                        </span>
-                                    </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     )}
                 </div>

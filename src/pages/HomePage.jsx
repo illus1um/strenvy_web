@@ -1,6 +1,6 @@
-import React, { memo } from 'react';
-import { Link } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import React, { memo, useMemo } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useSelector, useDispatch } from 'react-redux';
 import {
     Dumbbell,
     Calendar,
@@ -8,21 +8,88 @@ import {
     ArrowRight,
     Flame,
     Target,
-    Clock
+    Clock,
+    Play,
 } from 'lucide-react';
+import { startSession } from '../store/slices/sessionSlice';
 import './HomePage.css';
 
 const HomePage = memo(function HomePage() {
+    const dispatch = useDispatch();
+    const navigate = useNavigate();
     const { stats = {} } = useSelector(state => state.progress);
     const { activeProgram } = useSelector(state => state.programs);
-    const { isAuthenticated, currentUser } = useSelector(state => state.user);
+    const { isAuthenticated } = useSelector(state => state.user);
+    const { active: sessionActive } = useSelector(state => state.session);
 
-    // Default stats to avoid crashes
     const safeStats = {
         streak: stats?.streak || 0,
         totalWorkouts: stats?.totalWorkouts || 0,
         totalExercises: stats?.totalExercises || 0,
         totalVolume: stats?.totalVolume || 0,
+    };
+
+    const getLocalDateStr = (date) => {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    };
+
+    // Find today's workout from active program
+    const todayWorkout = useMemo(() => {
+        if (!activeProgram) return null;
+
+        const now = new Date();
+        const today = getLocalDateStr(now);
+
+        // Try scheduleDates first (date-based: { '2026-02-09': { name, exercises } })
+        if (activeProgram.scheduleDates && Object.keys(activeProgram.scheduleDates).length > 0) {
+            if (activeProgram.scheduleDates[today]) {
+                return { date: today, ...activeProgram.scheduleDates[today] };
+            }
+            return null;
+        }
+
+        // Fallback to schedule (day-of-week: { monday: { name, exercises } })
+        if (activeProgram.schedule && Object.keys(activeProgram.schedule).length > 0) {
+            const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+            const todayDay = dayNames[now.getDay()];
+            if (activeProgram.schedule[todayDay]) {
+                return { date: today, ...activeProgram.schedule[todayDay] };
+            }
+        }
+
+        return null;
+    }, [activeProgram]);
+
+    // Find next scheduled workout
+    const nextWorkout = useMemo(() => {
+        if (!activeProgram) return null;
+
+        // Only scheduleDates has future date keys
+        if (activeProgram.scheduleDates && Object.keys(activeProgram.scheduleDates).length > 0) {
+            const today = getLocalDateStr(new Date());
+            const futureDates = Object.keys(activeProgram.scheduleDates)
+                .filter(date => date > today)
+                .sort();
+
+            if (futureDates.length > 0) {
+                return { date: futureDates[0], ...activeProgram.scheduleDates[futureDates[0]] };
+            }
+        }
+
+        return null;
+    }, [activeProgram]);
+
+    const handleStartWorkout = () => {
+        if (!todayWorkout?.exercises) return;
+        dispatch(startSession({
+            name: todayWorkout.name || `${activeProgram.name} - Workout`,
+            programId: activeProgram.id,
+            exercises: todayWorkout.exercises,
+        }));
+        navigate('/session');
     };
 
     const features = [
@@ -106,20 +173,61 @@ const HomePage = memo(function HomePage() {
                 </section>
             )}
 
+            {/* Active Session Banner */}
+            {sessionActive && (
+                <section className="active-program-section">
+                    <div className="container">
+                        <div className="active-program-card" style={{ borderColor: 'rgba(251, 191, 36, 0.3)' }}>
+                            <div className="active-program-info">
+                                <span className="badge" style={{ background: 'rgba(251, 191, 36, 0.15)', color: '#fbbf24' }}>
+                                    Workout In Progress
+                                </span>
+                                <h3>You have an active session</h3>
+                                <p>Continue where you left off</p>
+                            </div>
+                            <Link to="/session" className="btn btn-primary">
+                                <Play size={18} />
+                                Continue Workout
+                            </Link>
+                        </div>
+                    </div>
+                </section>
+            )}
+
             {/* Active Program Banner */}
-            {activeProgram && (
+            {activeProgram && !sessionActive && (
                 <section className="active-program-section">
                     <div className="container">
                         <div className="active-program-card">
                             <div className="active-program-info">
                                 <span className="badge badge-success">Active Program</span>
                                 <h3>{activeProgram.name}</h3>
-                                <p>Week {activeProgram.currentWeek} of {activeProgram.duration}</p>
+                                {todayWorkout ? (
+                                    <p>
+                                        Today: <strong>{todayWorkout.name || 'Workout'}</strong>
+                                        {' '}({todayWorkout.exercises?.length || 0} exercises)
+                                    </p>
+                                ) : nextWorkout ? (
+                                    <p>
+                                        Next workout: {new Date(nextWorkout.date).toLocaleDateString('en-US', {
+                                            weekday: 'short', month: 'short', day: 'numeric'
+                                        })}
+                                    </p>
+                                ) : (
+                                    <p>Week {activeProgram.currentWeek} of {activeProgram.duration}</p>
+                                )}
                             </div>
-                            <Link to="/programs" className="btn btn-primary">
-                                Continue Training
-                                <ArrowRight size={18} />
-                            </Link>
+                            {todayWorkout ? (
+                                <button className="btn btn-primary" onClick={handleStartWorkout}>
+                                    <Play size={18} />
+                                    Start Workout
+                                </button>
+                            ) : (
+                                <Link to="/programs" className="btn btn-primary">
+                                    View Program
+                                    <ArrowRight size={18} />
+                                </Link>
+                            )}
                         </div>
                     </div>
                 </section>

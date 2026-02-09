@@ -5,6 +5,7 @@ import programsReducer from './slices/programsSlice';
 import progressReducer from './slices/progressSlice';
 import userReducer from './slices/userSlice';
 import usersReducer from './slices/usersSlice';
+import sessionReducer from './slices/sessionSlice';
 
 export const store = configureStore({
     reducer: {
@@ -14,6 +15,7 @@ export const store = configureStore({
         progress: progressReducer,
         user: userReducer,
         users: usersReducer,
+        session: sessionReducer,
     },
     middleware: (getDefaultMiddleware) =>
         getDefaultMiddleware({

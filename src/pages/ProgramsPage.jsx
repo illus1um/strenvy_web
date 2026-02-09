@@ -1,5 +1,6 @@
 import React, { memo, useState, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import {
     Plus,
     Calendar,
@@ -17,8 +18,16 @@ import Loading from '../components/common/Loading';
 import './ProgramsPage.css';
 import { useEffect } from 'react';
 
+const getScheduleDaysCount = (program) => {
+    if (program.scheduleDates && Object.keys(program.scheduleDates).length > 0) {
+        return Object.keys(program.scheduleDates).length;
+    }
+    return program.daysPerWeek?.length || 0;
+};
+
 const ProgramsPage = memo(function ProgramsPage() {
     const dispatch = useDispatch();
+    const navigate = useNavigate();
     const { adminPrograms, userPrograms, activeProgram, loading, error } = useSelector(state => state.programs);
     const [showForm, setShowForm] = useState(false);
     const [editingId, setEditingId] = useState(null);
@@ -108,7 +117,7 @@ const ProgramsPage = memo(function ProgramsPage() {
                             <h3>{activeProgram.name}</h3>
                             <p>Week {activeProgram.currentWeek} of {activeProgram.duration} weeks</p>
                         </div>
-                        <button className="btn btn-primary">
+                        <button className="btn btn-primary" onClick={() => navigate('/')}>
                             <Play size={18} />
                             Continue
                         </button>
@@ -224,7 +233,7 @@ const ProgramsPage = memo(function ProgramsPage() {
                                         </span>
                                         <span>
                                             <Clock size={16} />
-                                            {program.daysPerWeek?.length || 0} days/week
+                                            {getScheduleDaysCount(program)} days
                                         </span>
                                     </div>
                                     <button

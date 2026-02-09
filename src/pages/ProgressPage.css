@@ -154,6 +154,37 @@
     color: var(--color-text-tertiary);
 }
 
+/* Time Filter */
+.time-filter {
+    display: flex;
+    gap: 4px;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 8px;
+    padding: 3px;
+}
+
+.filter-btn {
+    padding: 5px 12px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--color-text-secondary);
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.filter-btn:hover {
+    color: var(--color-text-primary);
+}
+
+.filter-btn.active {
+    background: var(--color-accent-primary, #fbbf24);
+    color: #000;
+}
+
 /* Responsive */
 @media (max-width: 1024px) {
     .progress-page .stats-grid {
