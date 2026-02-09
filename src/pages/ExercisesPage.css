@@ -23,6 +23,7 @@
 @media (max-width: 540px) {
     .exercises-grid {
         grid-template-columns: 1fr;
+        gap: 0.75rem;
     }
 }
 

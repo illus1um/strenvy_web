@@ -155,8 +155,8 @@ const ProgressPage = memo(function ProgressPage() {
         return (
             <div className="page progress-page">
                 <div className="container">
-                    <div className="error-container" style={{ textAlign: 'center', padding: '40px' }}>
-                        <p style={{ color: '#ef4444' }}>Error loading data: {error}</p>
+                    <div className="error-container">
+                        <p className="error-text">Error loading data: {error}</p>
                         <button className="btn btn-ghost" onClick={() => dispatch(fetchHistory())}>Retry</button>
                     </div>
                 </div>
@@ -287,8 +287,8 @@ const ProgressPage = memo(function ProgressPage() {
                 {/* Stats Cards */}
                 <div className="stats-grid">
                     <div className="stat-card">
-                        <div className="stat-icon-wrapper" style={{ backgroundColor: 'rgba(239, 68, 68, 0.15)' }}>
-                            <Flame size={24} style={{ color: '#ef4444' }} />
+                        <div className="stat-icon-wrapper stat-icon-streak">
+                            <Flame size={24} />
                         </div>
                         <div className="stat-info">
                             <span className="stat-value">{safeStats.streak}</span>
@@ -297,8 +297,8 @@ const ProgressPage = memo(function ProgressPage() {
                     </div>
 
                     <div className="stat-card">
-                        <div className="stat-icon-wrapper" style={{ backgroundColor: 'rgba(251, 191, 36, 0.15)' }}>
-                            <Target size={24} style={{ color: '#fbbf24' }} />
+                        <div className="stat-icon-wrapper stat-icon-workouts">
+                            <Target size={24} />
                         </div>
                         <div className="stat-info">
                             <span className="stat-value">{safeStats.totalWorkouts}</span>
@@ -307,8 +307,8 @@ const ProgressPage = memo(function ProgressPage() {
                     </div>
 
                     <div className="stat-card">
-                        <div className="stat-icon-wrapper" style={{ backgroundColor: 'rgba(217, 119, 6, 0.15)' }}>
-                            <Dumbbell size={24} style={{ color: '#d97706' }} />
+                        <div className="stat-icon-wrapper stat-icon-exercises">
+                            <Dumbbell size={24} />
                         </div>
                         <div className="stat-info">
                             <span className="stat-value">{safeStats.totalExercises}</span>
@@ -317,8 +317,8 @@ const ProgressPage = memo(function ProgressPage() {
                     </div>
 
                     <div className="stat-card">
-                        <div className="stat-icon-wrapper" style={{ backgroundColor: 'rgba(34, 197, 94, 0.15)' }}>
-                            <TrendingUp size={24} style={{ color: '#22c55e' }} />
+                        <div className="stat-icon-wrapper stat-icon-volume">
+                            <TrendingUp size={24} />
                         </div>
                         <div className="stat-info">
                             <span className="stat-value">{Math.round(safeStats.totalVolume / 1000)}k</span>
@@ -346,8 +346,8 @@ const ProgressPage = memo(function ProgressPage() {
                     </div>
 
                     <div className="chart-card">
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
-                            <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <div className="chart-header">
+                            <h3>
                                 <Activity size={18} />
                                 Muscle Groups
                             </h3>

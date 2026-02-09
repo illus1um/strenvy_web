@@ -65,6 +65,22 @@
     margin-bottom: 0.75rem;
 }
 
+.stat-icon-flame {
+    color: #ef4444;
+}
+
+.stat-icon-target {
+    color: #6366f1;
+}
+
+.stat-icon-dumbbell {
+    color: #8b5cf6;
+}
+
+.stat-icon-volume {
+    color: #22c55e;
+}
+
 .stat-value {
     font-size: 2rem;
     font-weight: 700;
@@ -91,6 +107,10 @@
     gap: 2rem;
 }
 
+.active-session-card {
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
 .active-program-info .badge {
     margin-bottom: 0.5rem;
 }
@@ -106,7 +126,215 @@
 
 .active-program-card .btn {
     background: white;
+    color: var(--color-accent-secondary);
+    box-shadow: none;
+}
+
+.active-program-card .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Training Calendar */
+.calendar-section {
+    padding: 0 0 2rem;
+}
+
+.training-calendar {
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-xl);
+    padding: 1.5rem;
+}
+
+.cal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.25rem;
+}
+
+.cal-header h3 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1rem;
+    margin: 0;
+}
+
+.cal-nav {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.cal-month-label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    min-width: 140px;
+    text-align: center;
+}
+
+.cal-day-labels {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    margin-bottom: 4px;
+}
+
+.cal-day-label {
+    text-align: center;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--color-text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 4px 0;
+}
+
+.cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+}
+
+.cal-day {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 4px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    min-height: 40px;
+    gap: 2px;
+}
+
+.cal-day.empty {
+    cursor: default;
+}
+
+.cal-day:not(.empty):hover {
+    background: var(--color-bg-hover);
+}
+
+.cal-day-num {
+    font-size: 0.8rem;
+    font-weight: 500;
+    line-height: 1;
+}
+
+.cal-day.today {
+    background: var(--color-bg-tertiary);
+}
+
+.cal-day.today .cal-day-num {
     color: var(--color-accent-primary);
+    font-weight: 700;
+}
+
+.cal-day.scheduled .cal-day-num {
+    font-weight: 600;
+}
+
+.cal-day.completed {
+    background: rgba(34, 197, 94, 0.08);
+}
+
+.cal-day.completed .cal-day-num {
+    color: var(--color-success);
+}
+
+.cal-day.selected {
+    background: var(--color-accent-glow);
+    outline: 1px solid var(--color-accent-primary);
+}
+
+.cal-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--color-accent-primary);
+    display: inline-block;
+}
+
+.cal-check {
+    color: var(--color-success);
+}
+
+/* Calendar Legend */
+.cal-legend {
+    display: flex;
+    gap: 1.25rem;
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--color-border);
+}
+
+.cal-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.72rem;
+    color: var(--color-text-tertiary);
+}
+
+.cal-legend-check {
+    color: var(--color-success);
+}
+
+.cal-today-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    background: var(--color-bg-tertiary);
+    border: 1px solid var(--color-accent-primary);
+    display: inline-block;
+}
+
+/* Calendar Preview */
+.cal-preview {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: var(--color-bg-tertiary);
+    border-radius: var(--radius-md);
+    gap: 1rem;
+}
+
+.cal-preview-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.cal-preview-info strong {
+    font-size: 0.875rem;
+}
+
+.cal-preview-info span {
+    font-size: 0.75rem;
+    color: var(--color-text-tertiary);
+}
+
+/* Feature Icon Colors */
+.feature-icon-exercises {
+    background-color: rgba(99, 102, 241, 0.12);
+    color: #6366f1;
+}
+
+.feature-icon-programs {
+    background-color: rgba(139, 92, 246, 0.12);
+    color: #8b5cf6;
+}
+
+.feature-icon-progress {
+    background-color: rgba(34, 197, 94, 0.12);
+    color: #22c55e;
 }
 
 /* Features Section */
@@ -235,5 +463,38 @@
 
     .cta-card {
         padding: 2rem;
+    }
+
+    .cal-legend {
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+    }
+
+    .stat-card {
+        padding: 1rem;
+    }
+
+    .stat-value {
+        font-size: 1.5rem;
+    }
+
+    .cal-day {
+        min-height: 36px;
+        padding: 6px 2px;
+    }
+
+    .cal-day-num {
+        font-size: 0.72rem;
+    }
+
+    .training-calendar {
+        padding: 1rem;
     }
 }

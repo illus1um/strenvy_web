@@ -1,4 +1,4 @@
-import React, { memo, useMemo } from 'react';
+import React, { memo, useMemo, useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import {
@@ -10,17 +10,35 @@ import {
     Target,
     Clock,
     Play,
+    ChevronLeft,
+    ChevronRight,
+    Check,
 } from 'lucide-react';
 import { startSession } from '../store/slices/sessionSlice';
 import './HomePage.css';
 
+const getLocalDateStr = (date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+};
+
+const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
 const HomePage = memo(function HomePage() {
     const dispatch = useDispatch();
     const navigate = useNavigate();
-    const { stats = {} } = useSelector(state => state.progress);
+    const { stats = {}, workoutHistory = [] } = useSelector(state => state.progress);
     const { activeProgram } = useSelector(state => state.programs);
     const { isAuthenticated } = useSelector(state => state.user);
     const { active: sessionActive } = useSelector(state => state.session);
+
+    const [calMonth, setCalMonth] = useState(() => {
+        const now = new Date();
+        return { year: now.getFullYear(), month: now.getMonth() };
+    });
+    const [selectedDay, setSelectedDay] = useState(null);
 
     const safeStats = {
         streak: stats?.streak || 0,
@@ -29,21 +47,12 @@ const HomePage = memo(function HomePage() {
         totalVolume: stats?.totalVolume || 0,
     };
 
-    const getLocalDateStr = (date) => {
-        const y = date.getFullYear();
-        const m = String(date.getMonth() + 1).padStart(2, '0');
-        const d = String(date.getDate()).padStart(2, '0');
-        return `${y}-${m}-${d}`;
-    };
-
     // Find today's workout from active program
     const todayWorkout = useMemo(() => {
         if (!activeProgram) return null;
-
         const now = new Date();
         const today = getLocalDateStr(now);
 
-        // Try scheduleDates first (date-based: { '2026-02-09': { name, exercises } })
         if (activeProgram.scheduleDates && Object.keys(activeProgram.scheduleDates).length > 0) {
             if (activeProgram.scheduleDates[today]) {
                 return { date: today, ...activeProgram.scheduleDates[today] };
@@ -51,7 +60,6 @@ const HomePage = memo(function HomePage() {
             return null;
         }
 
-        // Fallback to schedule (day-of-week: { monday: { name, exercises } })
         if (activeProgram.schedule && Object.keys(activeProgram.schedule).length > 0) {
             const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
             const todayDay = dayNames[now.getDay()];
@@ -66,23 +74,94 @@ const HomePage = memo(function HomePage() {
     // Find next scheduled workout
     const nextWorkout = useMemo(() => {
         if (!activeProgram) return null;
-
-        // Only scheduleDates has future date keys
         if (activeProgram.scheduleDates && Object.keys(activeProgram.scheduleDates).length > 0) {
             const today = getLocalDateStr(new Date());
             const futureDates = Object.keys(activeProgram.scheduleDates)
                 .filter(date => date > today)
                 .sort();
-
             if (futureDates.length > 0) {
                 return { date: futureDates[0], ...activeProgram.scheduleDates[futureDates[0]] };
             }
         }
-
         return null;
     }, [activeProgram]);
 
-    const handleStartWorkout = () => {
+    // Calendar data
+    const scheduledDates = useMemo(() => {
+        if (!activeProgram?.scheduleDates) return {};
+        return activeProgram.scheduleDates;
+    }, [activeProgram]);
+
+    const completedDates = useMemo(() => {
+        const set = {};
+        workoutHistory.forEach(w => {
+            if (w.completedAt) {
+                const d = getLocalDateStr(new Date(w.completedAt));
+                set[d] = true;
+            }
+        });
+        return set;
+    }, [workoutHistory]);
+
+    // Build calendar grid (Monday-start)
+    const calendarDays = useMemo(() => {
+        const { year, month } = calMonth;
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        let startOffset = firstDay.getDay() - 1;
+        if (startOffset < 0) startOffset = 6;
+
+        const days = [];
+        for (let i = 0; i < startOffset; i++) {
+            days.push(null);
+        }
+        for (let d = 1; d <= lastDay.getDate(); d++) {
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+            days.push({
+                day: d,
+                dateStr,
+                scheduled: !!scheduledDates[dateStr],
+                completed: !!completedDates[dateStr],
+                isToday: dateStr === getLocalDateStr(new Date()),
+            });
+        }
+        return days;
+    }, [calMonth, scheduledDates, completedDates]);
+
+    const calMonthLabel = useMemo(() => {
+        return new Date(calMonth.year, calMonth.month).toLocaleDateString('en-US', {
+            month: 'long',
+            year: 'numeric',
+        });
+    }, [calMonth]);
+
+    const handlePrevMonth = useCallback(() => {
+        setCalMonth(prev => {
+            const m = prev.month - 1;
+            return m < 0 ? { year: prev.year - 1, month: 11 } : { ...prev, month: m };
+        });
+        setSelectedDay(null);
+    }, []);
+
+    const handleNextMonth = useCallback(() => {
+        setCalMonth(prev => {
+            const m = prev.month + 1;
+            return m > 11 ? { year: prev.year + 1, month: 0 } : { ...prev, month: m };
+        });
+        setSelectedDay(null);
+    }, []);
+
+    const handleDayClick = useCallback((day) => {
+        if (!day) return;
+        setSelectedDay(prev => prev === day.dateStr ? null : day.dateStr);
+    }, []);
+
+    const selectedWorkout = useMemo(() => {
+        if (!selectedDay || !scheduledDates[selectedDay]) return null;
+        return scheduledDates[selectedDay];
+    }, [selectedDay, scheduledDates]);
+
+    const handleStartWorkout = useCallback(() => {
         if (!todayWorkout?.exercises) return;
         dispatch(startSession({
             name: todayWorkout.name || `${activeProgram.name} - Workout`,
@@ -90,7 +169,17 @@ const HomePage = memo(function HomePage() {
             exercises: todayWorkout.exercises,
         }));
         navigate('/session');
-    };
+    }, [todayWorkout, activeProgram, dispatch, navigate]);
+
+    const handleStartSelectedWorkout = useCallback(() => {
+        if (!selectedWorkout?.exercises) return;
+        dispatch(startSession({
+            name: selectedWorkout.name || `${activeProgram.name} - Workout`,
+            programId: activeProgram.id,
+            exercises: selectedWorkout.exercises,
+        }));
+        navigate('/session');
+    }, [selectedWorkout, activeProgram, dispatch, navigate]);
 
     const features = [
         {
@@ -98,21 +187,21 @@ const HomePage = memo(function HomePage() {
             title: '1300+ Exercises',
             description: 'Comprehensive library with GIF animations and detailed instructions',
             link: '/exercises',
-            color: '#6366f1'
+            colorClass: 'feature-icon-exercises',
         },
         {
             icon: Calendar,
             title: 'Training Programs',
             description: 'Pre-made plans or create your own custom programs',
             link: '/programs',
-            color: '#8b5cf6'
+            colorClass: 'feature-icon-programs',
         },
         {
             icon: BarChart3,
             title: 'Track Progress',
             description: 'Log workouts and visualize your fitness journey',
             link: '/progress',
-            color: '#22c55e'
+            colorClass: 'feature-icon-progress',
         },
     ];
 
@@ -143,28 +232,28 @@ const HomePage = memo(function HomePage() {
                 </div>
             </section>
 
-            {/* Stats Section (if authenticated) */}
+            {/* Stats Section */}
             {isAuthenticated && (
                 <section className="stats-section">
                     <div className="container">
                         <div className="stats-grid">
                             <div className="stat-card">
-                                <Flame className="stat-icon" style={{ color: '#ef4444' }} />
+                                <Flame className="stat-icon stat-icon-flame" />
                                 <div className="stat-value">{safeStats.streak}</div>
                                 <div className="stat-label">Day Streak</div>
                             </div>
                             <div className="stat-card">
-                                <Target className="stat-icon" style={{ color: '#6366f1' }} />
+                                <Target className="stat-icon stat-icon-target" />
                                 <div className="stat-value">{safeStats.totalWorkouts}</div>
                                 <div className="stat-label">Workouts</div>
                             </div>
                             <div className="stat-card">
-                                <Dumbbell className="stat-icon" style={{ color: '#8b5cf6' }} />
+                                <Dumbbell className="stat-icon stat-icon-dumbbell" />
                                 <div className="stat-value">{safeStats.totalExercises}</div>
                                 <div className="stat-label">Exercises Done</div>
                             </div>
                             <div className="stat-card">
-                                <Clock className="stat-icon" style={{ color: '#22c55e' }} />
+                                <Clock className="stat-icon stat-icon-volume" />
                                 <div className="stat-value">{Math.round(safeStats.totalVolume / 1000)}k</div>
                                 <div className="stat-label">Total Volume (kg)</div>
                             </div>
@@ -177,11 +266,9 @@ const HomePage = memo(function HomePage() {
             {sessionActive && (
                 <section className="active-program-section">
                     <div className="container">
-                        <div className="active-program-card" style={{ borderColor: 'rgba(251, 191, 36, 0.3)' }}>
+                        <div className="active-program-card active-session-card">
                             <div className="active-program-info">
-                                <span className="badge" style={{ background: 'rgba(251, 191, 36, 0.15)', color: '#fbbf24' }}>
-                                    Workout In Progress
-                                </span>
+                                <span className="badge badge-warning">Workout In Progress</span>
                                 <h3>You have an active session</h3>
                                 <p>Continue where you left off</p>
                             </div>
@@ -209,7 +296,7 @@ const HomePage = memo(function HomePage() {
                                     </p>
                                 ) : nextWorkout ? (
                                     <p>
-                                        Next workout: {new Date(nextWorkout.date).toLocaleDateString('en-US', {
+                                        Next workout: {new Date(nextWorkout.date + 'T00:00:00').toLocaleDateString('en-US', {
                                             weekday: 'short', month: 'short', day: 'numeric'
                                         })}
                                     </p>
@@ -233,6 +320,76 @@ const HomePage = memo(function HomePage() {
                 </section>
             )}
 
+            {/* Training Calendar */}
+            {isAuthenticated && activeProgram && (
+                <section className="calendar-section">
+                    <div className="container">
+                        <div className="training-calendar">
+                            <div className="cal-header">
+                                <h3>
+                                    <Calendar size={18} />
+                                    Training Schedule
+                                </h3>
+                                <div className="cal-nav">
+                                    <button className="btn btn-ghost btn-icon btn-sm" onClick={handlePrevMonth}>
+                                        <ChevronLeft size={18} />
+                                    </button>
+                                    <span className="cal-month-label">{calMonthLabel}</span>
+                                    <button className="btn btn-ghost btn-icon btn-sm" onClick={handleNextMonth}>
+                                        <ChevronRight size={18} />
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="cal-day-labels">
+                                {DAY_LABELS.map(d => (
+                                    <span key={d} className="cal-day-label">{d}</span>
+                                ))}
+                            </div>
+
+                            <div className="cal-grid">
+                                {calendarDays.map((day, i) => (
+                                    <div
+                                        key={i}
+                                        className={`cal-day ${!day ? 'empty' : ''} ${day?.isToday ? 'today' : ''} ${day?.scheduled ? 'scheduled' : ''} ${day?.completed ? 'completed' : ''} ${selectedDay === day?.dateStr ? 'selected' : ''}`}
+                                        onClick={() => day && handleDayClick(day)}
+                                    >
+                                        {day && (
+                                            <>
+                                                <span className="cal-day-num">{day.day}</span>
+                                                {day.completed && <Check size={12} className="cal-check" />}
+                                                {day.scheduled && !day.completed && <span className="cal-dot" />}
+                                            </>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="cal-legend">
+                                <span className="cal-legend-item"><span className="cal-dot" /> Scheduled</span>
+                                <span className="cal-legend-item"><Check size={12} className="cal-legend-check" /> Completed</span>
+                                <span className="cal-legend-item"><span className="cal-today-dot" /> Today</span>
+                            </div>
+
+                            {selectedDay && selectedWorkout && (
+                                <div className="cal-preview">
+                                    <div className="cal-preview-info">
+                                        <strong>{selectedWorkout.name || 'Workout'}</strong>
+                                        <span>{selectedWorkout.exercises?.length || 0} exercises</span>
+                                    </div>
+                                    {selectedDay === getLocalDateStr(new Date()) && !sessionActive && (
+                                        <button className="btn btn-primary btn-sm" onClick={handleStartSelectedWorkout}>
+                                            <Play size={14} />
+                                            Start
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </section>
+            )}
+
             {/* Features Section */}
             <section className="features-section">
                 <div className="container">
@@ -240,10 +397,7 @@ const HomePage = memo(function HomePage() {
                     <div className="features-grid">
                         {features.map((feature, idx) => (
                             <Link key={idx} to={feature.link} className="feature-card">
-                                <div
-                                    className="feature-icon"
-                                    style={{ backgroundColor: `${feature.color}20`, color: feature.color }}
-                                >
+                                <div className={`feature-icon ${feature.colorClass}`}>
                                     <feature.icon size={24} />
                                 </div>
                                 <h3>{feature.title}</h3>
@@ -264,7 +418,7 @@ const HomePage = memo(function HomePage() {
                         <div className="cta-card">
                             <h2>Ready to Start Your Journey?</h2>
                             <p>Create your profile and start tracking your fitness progress today.</p>
-                            <Link to="/profile" className="btn btn-primary btn-lg">
+                            <Link to="/register" className="btn btn-primary btn-lg">
                                 Get Started Free
                                 <ArrowRight size={20} />
                             </Link>

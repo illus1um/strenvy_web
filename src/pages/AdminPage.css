@@ -20,10 +20,10 @@
     font-size: 1.75rem;
 }
 
-/* Stats */
+/* Stats — 4 columns */
 .admin-stats {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 1.5rem;
     margin-bottom: 2rem;
 }
@@ -42,7 +42,7 @@
     color: var(--color-accent-primary);
 }
 
-.admin-stats .stat-card>div {
+.admin-stats .stat-card > div {
     display: flex;
     flex-direction: column;
 }
@@ -77,6 +77,7 @@
     color: var(--color-text-secondary);
     cursor: pointer;
     transition: all 0.2s;
+    font-size: 0.9375rem;
 }
 
 .admin-tabs .tab:hover {
@@ -97,15 +98,75 @@
     padding: 1.5rem;
 }
 
-.section-header {
+.admin-section .section-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 1.5rem;
 }
 
-.section-header h2 {
+.admin-section .section-header h2 {
     font-size: 1.125rem;
+    margin: 0;
+}
+
+/* Search & Filter Bar */
+.admin-filters {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.admin-search {
+    position: relative;
+    flex: 1;
+}
+
+.admin-search svg {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--color-text-tertiary);
+    pointer-events: none;
+}
+
+.admin-search .input {
+    padding-left: 36px;
+    width: 100%;
+}
+
+.admin-filter-select {
+    position: relative;
+    min-width: 180px;
+}
+
+.admin-filter-select svg {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--color-text-tertiary);
+    pointer-events: none;
+}
+
+.admin-filter-select .select {
+    padding-left: 36px;
+    width: 100%;
+}
+
+/* Empty State */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 3rem 1rem;
+    color: var(--color-text-tertiary);
+    text-align: center;
+}
+
+.empty-state p {
     margin: 0;
 }
 
@@ -145,6 +206,19 @@
     width: 10px;
     height: 10px;
     border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.difficulty-beginner {
+    background-color: #22c55e;
+}
+
+.difficulty-intermediate {
+    background-color: #f59e0b;
+}
+
+.difficulty-advanced {
+    background-color: #ef4444;
 }
 
 .program-info h3 {
@@ -217,6 +291,12 @@
     border-radius: var(--radius-md);
     padding: 0.75rem;
     text-align: center;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.exercise-preview-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
 }
 
 .exercise-preview-card img {
@@ -225,14 +305,106 @@
     object-fit: cover;
     border-radius: var(--radius-sm);
     margin-bottom: 0.5rem;
+    background: var(--color-bg-secondary);
 }
 
-.exercise-preview-card span {
+.exercise-preview-name {
     font-size: 0.75rem;
+    font-weight: 500;
     display: block;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    margin-bottom: 2px;
+}
+
+.exercise-preview-body {
+    font-size: 0.65rem;
+    color: var(--color-text-tertiary);
+    display: block;
+    text-transform: capitalize;
+}
+
+/* Load More */
+.load-more {
+    display: flex;
+    justify-content: center;
+    margin-top: 1.5rem;
+}
+
+/* Users List */
+.users-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.user-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.875rem 1rem;
+    border-radius: var(--radius-md);
+    transition: background 0.15s;
+}
+
+.user-row:hover {
+    background: var(--color-bg-tertiary);
+}
+
+.user-avatar-placeholder {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--color-accent-gradient);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.user-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.user-name {
+    font-weight: 600;
+    font-size: 0.9375rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.user-username {
+    font-weight: 400;
+    font-size: 0.8125rem;
+    color: var(--color-text-tertiary);
+}
+
+.user-email {
+    font-size: 0.8125rem;
+    color: var(--color-text-secondary);
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.user-date {
+    font-size: 0.8125rem;
+    color: var(--color-text-tertiary);
+    white-space: nowrap;
+}
+
+.user-actions-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    flex-shrink: 0;
 }
 
 /* Form Modal */
@@ -247,9 +419,28 @@
 }
 
 /* Responsive */
+@media (max-width: 1024px) {
+    .admin-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .exercises-preview {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
 @media (max-width: 768px) {
     .admin-stats {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+    }
+
+    .admin-filters {
+        flex-direction: column;
+    }
+
+    .admin-filter-select {
+        min-width: 0;
     }
 
     .exercises-preview {
@@ -259,19 +450,49 @@
     .form-row {
         grid-template-columns: 1fr;
     }
+
+    .user-row {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .user-date {
+        display: none;
+    }
+
+    .user-info {
+        flex: 1;
+        min-width: 120px;
+    }
 }
 
-/* User Avatar Placeholder */
-.user-avatar-placeholder {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: var(--color-accent-primary);
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    font-size: 1.25rem;
-    margin-right: 1rem;
+@media (max-width: 480px) {
+    .admin-stats {
+        grid-template-columns: 1fr 1fr;
+        gap: 0.5rem;
+    }
+
+    .admin-stats .stat-card {
+        padding: 1rem;
+    }
+
+    .admin-tabs {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .admin-tabs .tab {
+        white-space: nowrap;
+        padding: 0.625rem 1rem;
+        font-size: 0.875rem;
+    }
+
+    .exercises-preview {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+    }
+
+    .user-row {
+        padding: 0.75rem;
+    }
 }

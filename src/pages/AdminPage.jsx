@@ -1,4 +1,4 @@
-import React, { memo, useState, useCallback, useEffect } from 'react';
+import React, { memo, useState, useCallback, useEffect, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
     Plus,
@@ -12,7 +12,9 @@ import {
     ChevronUp,
     Save,
     X,
-    Shield
+    Shield,
+    Search,
+    Filter,
 } from 'lucide-react';
 import {
     createProgram,
@@ -39,16 +41,14 @@ const DAYS = [
     { key: 'sunday', label: 'Sun' },
 ];
 
+const EXERCISES_PER_PAGE = 24;
+
 const AdminPage = memo(function AdminPage() {
     const dispatch = useDispatch();
     const { adminPrograms, userPrograms, loading } = useSelector(state => state.programs);
-    const { filtered: exercises } = useSelector(state => state.exercises);
+    const { filtered: exercises, bodyParts } = useSelector(state => state.exercises);
     const { users } = useSelector(state => state.users);
     const { currentUser } = useSelector(state => state.user);
-
-    if (loading && adminPrograms.length === 0) {
-        return <Loading text="Loading admin panel..." />;
-    }
 
     const [activeTab, setActiveTab] = useState('programs');
     const [showForm, setShowForm] = useState(false);
@@ -56,6 +56,12 @@ const AdminPage = memo(function AdminPage() {
     const [editingProgram, setEditingProgram] = useState(null);
     const [editingUser, setEditingUser] = useState(null);
     const [expandedProgram, setExpandedProgram] = useState(null);
+
+    // Search states
+    const [userSearch, setUserSearch] = useState('');
+    const [exerciseSearch, setExerciseSearch] = useState('');
+    const [exerciseBodyPart, setExerciseBodyPart] = useState('');
+    const [exercisesShown, setExercisesShown] = useState(EXERCISES_PER_PAGE);
 
     // Form state
     const [formData, setFormData] = useState({
@@ -69,6 +75,7 @@ const AdminPage = memo(function AdminPage() {
 
     // User Form state
     const [userFormData, setUserFormData] = useState({
+        username: '',
         name: '',
         email: '',
         password: '',
@@ -81,6 +88,35 @@ const AdminPage = memo(function AdminPage() {
         }
         dispatch(fetchUsers());
     }, [dispatch, exercises.length]);
+
+    // Reset exercises shown when filters change
+    useEffect(() => {
+        setExercisesShown(EXERCISES_PER_PAGE);
+    }, [exerciseSearch, exerciseBodyPart]);
+
+    // Filtered users
+    const filteredUsers = useMemo(() => {
+        if (!userSearch.trim()) return users;
+        const q = userSearch.toLowerCase();
+        return users.filter(u =>
+            u.name?.toLowerCase().includes(q) ||
+            u.email?.toLowerCase().includes(q) ||
+            u.username?.toLowerCase().includes(q)
+        );
+    }, [users, userSearch]);
+
+    // Filtered exercises (local filter on top of slice filter)
+    const filteredExercises = useMemo(() => {
+        let result = exercises;
+        if (exerciseSearch.trim()) {
+            const q = exerciseSearch.toLowerCase();
+            result = result.filter(e => e.name.toLowerCase().includes(q));
+        }
+        if (exerciseBodyPart) {
+            result = result.filter(e => e.bodyPart === exerciseBodyPart);
+        }
+        return result;
+    }, [exercises, exerciseSearch, exerciseBodyPart]);
 
     const handleInputChange = useCallback((e) => {
         const { name, value } = e.target;
@@ -126,9 +162,10 @@ const AdminPage = memo(function AdminPage() {
     const handleEditUser = useCallback((user) => {
         setEditingUser(user);
         setUserFormData({
+            username: user.username || '',
             name: user.name,
             email: user.email,
-            password: '', // Don't show password
+            password: '',
             role: user.role,
         });
         setShowUserForm(true);
@@ -196,19 +233,19 @@ const AdminPage = memo(function AdminPage() {
                 name: userFormData.name,
                 role: userFormData.role,
             };
-            // Only send password if entered
             if (userFormData.password) {
                 updates.password = userFormData.password;
             }
             dispatch(updateUser(updates));
         } else {
-            if (!userFormData.password) return; // Password required for new user
+            if (!userFormData.password || !userFormData.username.trim()) return;
             dispatch(createUser(userFormData));
         }
 
         setShowUserForm(false);
         setEditingUser(null);
         setUserFormData({
+            username: '',
             name: '',
             email: '',
             password: '',
@@ -220,6 +257,7 @@ const AdminPage = memo(function AdminPage() {
         setShowUserForm(false);
         setEditingUser(null);
         setUserFormData({
+            username: '',
             name: '',
             email: '',
             password: '',
@@ -227,14 +265,9 @@ const AdminPage = memo(function AdminPage() {
         });
     }, []);
 
-    const getDifficultyColor = (difficulty) => {
-        const colors = {
-            beginner: '#22c55e',
-            intermediate: '#f59e0b',
-            advanced: '#ef4444',
-        };
-        return colors[difficulty] || colors.beginner;
-    };
+    const handleLoadMore = useCallback(() => {
+        setExercisesShown(prev => prev + EXERCISES_PER_PAGE);
+    }, []);
 
     // Stats
     const stats = {
@@ -243,6 +276,10 @@ const AdminPage = memo(function AdminPage() {
         totalExercises: exercises.length,
         totalUsers: users.length,
     };
+
+    if (loading && adminPrograms.length === 0) {
+        return <Loading text="Loading admin panel..." />;
+    }
 
     return (
         <div className="page admin-page">
@@ -267,7 +304,7 @@ const AdminPage = memo(function AdminPage() {
                         </div>
                     </div>
                     <div className="stat-card">
-                        <Users size={24} />
+                        <Calendar size={24} />
                         <div>
                             <span className="stat-value">{stats.totalUserPrograms}</span>
                             <span className="stat-label">User Programs</span>
@@ -278,6 +315,13 @@ const AdminPage = memo(function AdminPage() {
                         <div>
                             <span className="stat-value">{stats.totalExercises}</span>
                             <span className="stat-label">Exercises</span>
+                        </div>
+                    </div>
+                    <div className="stat-card">
+                        <Users size={24} />
+                        <div>
+                            <span className="stat-value">{stats.totalUsers}</span>
+                            <span className="stat-label">Total Users</span>
                         </div>
                     </div>
                 </div>
@@ -303,7 +347,7 @@ const AdminPage = memo(function AdminPage() {
                         onClick={() => setActiveTab('users')}
                     >
                         <Users size={18} />
-                        Users
+                        Users ({stats.totalUsers})
                     </button>
                 </div>
 
@@ -321,71 +365,75 @@ const AdminPage = memo(function AdminPage() {
                             </button>
                         </div>
 
-                        <div className="programs-list">
-                            {adminPrograms.map(program => (
-                                <div key={program.id} className="admin-program-card">
-                                    <div
-                                        className="program-row"
-                                        onClick={() => setExpandedProgram(
-                                            expandedProgram === program.id ? null : program.id
-                                        )}
-                                    >
-                                        <div className="program-info">
-                                            <span
-                                                className="difficulty-dot"
-                                                style={{ backgroundColor: getDifficultyColor(program.difficulty) }}
-                                            />
-                                            <h3>{program.name}</h3>
-                                            <span className="program-meta-inline">
-                                                {program.duration} weeks • {program.daysPerWeek.length} days/week
-                                            </span>
-                                        </div>
-                                        <div className="program-actions">
-                                            <button
-                                                className="btn btn-ghost btn-icon"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleEditProgram(program);
-                                                }}
-                                            >
-                                                <Edit size={16} />
-                                            </button>
-                                            <button
-                                                className="btn btn-ghost btn-icon"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleDeleteProgram(program.id);
-                                                }}
-                                            >
-                                                <Trash2 size={16} />
-                                            </button>
-                                            {expandedProgram === program.id ? (
-                                                <ChevronUp size={20} />
-                                            ) : (
-                                                <ChevronDown size={20} />
+                        {adminPrograms.length === 0 ? (
+                            <div className="empty-state">
+                                <Calendar size={40} />
+                                <p>No admin programs yet. Create your first program.</p>
+                            </div>
+                        ) : (
+                            <div className="programs-list">
+                                {adminPrograms.map(program => (
+                                    <div key={program.id} className="admin-program-card">
+                                        <div
+                                            className="program-row"
+                                            onClick={() => setExpandedProgram(
+                                                expandedProgram === program.id ? null : program.id
                                             )}
-                                        </div>
-                                    </div>
-                                    {expandedProgram === program.id && (
-                                        <div className="program-details">
-                                            <p>{program.description}</p>
-                                            <div className="schedule-preview">
-                                                {Object.entries(program.schedule).map(([day, workout]) => (
-                                                    <div key={day} className="day-preview">
-                                                        <strong>{day}</strong>: {workout.name}
-                                                        {workout.exercises.length > 0 && (
-                                                            <span className="exercise-count">
-                                                                ({workout.exercises.length} exercises)
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                ))}
+                                        >
+                                            <div className="program-info">
+                                                <span className={`difficulty-dot difficulty-${program.difficulty}`} />
+                                                <h3>{program.name}</h3>
+                                                <span className="program-meta-inline">
+                                                    {program.duration} weeks &bull; {program.daysPerWeek.length} days/week
+                                                </span>
+                                            </div>
+                                            <div className="program-actions">
+                                                <button
+                                                    className="btn btn-ghost btn-icon"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleEditProgram(program);
+                                                    }}
+                                                >
+                                                    <Edit size={16} />
+                                                </button>
+                                                <button
+                                                    className="btn btn-ghost btn-icon"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleDeleteProgram(program.id);
+                                                    }}
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                                {expandedProgram === program.id ? (
+                                                    <ChevronUp size={20} />
+                                                ) : (
+                                                    <ChevronDown size={20} />
+                                                )}
                                             </div>
                                         </div>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
+                                        {expandedProgram === program.id && (
+                                            <div className="program-details">
+                                                <p>{program.description}</p>
+                                                <div className="schedule-preview">
+                                                    {Object.entries(program.schedule).map(([day, workout]) => (
+                                                        <div key={day} className="day-preview">
+                                                            <strong>{day}</strong>: {workout.name}
+                                                            {workout.exercises.length > 0 && (
+                                                                <span className="exercise-count">
+                                                                    ({workout.exercises.length} exercises)
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 )}
 
@@ -394,23 +442,145 @@ const AdminPage = memo(function AdminPage() {
                     <div className="admin-section">
                         <div className="section-header">
                             <h2>Exercise Library</h2>
-                            <span className="text-muted">{exercises.length} exercises loaded</span>
+                            <span className="text-muted">{filteredExercises.length} of {exercises.length} exercises</span>
                         </div>
-                        <p className="info-text">
-                            Exercises are loaded from the JSON database. To add new exercises,
-                            update the <code>exercises.json</code> file and add corresponding GIF files.
-                        </p>
-                        <div className="exercises-preview">
-                            {exercises.slice(0, 6).map(exercise => (
-                                <div key={exercise.id} className="exercise-preview-card">
-                                    <img
-                                        src={exercise.localPng || exercise.localGif}
-                                        alt={exercise.name}
-                                    />
-                                    <span>{exercise.name}</span>
+
+                        <div className="admin-filters">
+                            <div className="admin-search">
+                                <Search size={16} />
+                                <input
+                                    type="text"
+                                    className="input"
+                                    placeholder="Search exercises..."
+                                    value={exerciseSearch}
+                                    onChange={(e) => setExerciseSearch(e.target.value)}
+                                />
+                            </div>
+                            <div className="admin-filter-select">
+                                <Filter size={16} />
+                                <select
+                                    className="input select"
+                                    value={exerciseBodyPart}
+                                    onChange={(e) => setExerciseBodyPart(e.target.value)}
+                                >
+                                    <option value="">All Body Parts</option>
+                                    {bodyParts.map(bp => (
+                                        <option key={bp} value={bp}>{bp}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+
+                        {filteredExercises.length === 0 ? (
+                            <div className="empty-state">
+                                <Dumbbell size={40} />
+                                <p>No exercises match your search.</p>
+                            </div>
+                        ) : (
+                            <>
+                                <div className="exercises-preview">
+                                    {filteredExercises.slice(0, exercisesShown).map(exercise => (
+                                        <div key={exercise.id} className="exercise-preview-card">
+                                            <img
+                                                src={exercise.localPng || exercise.localGif}
+                                                alt={exercise.name}
+                                                loading="lazy"
+                                            />
+                                            <span className="exercise-preview-name">{exercise.name}</span>
+                                            <span className="exercise-preview-body">{exercise.bodyPart}</span>
+                                        </div>
+                                    ))}
                                 </div>
-                            ))}
+                                {exercisesShown < filteredExercises.length && (
+                                    <div className="load-more">
+                                        <button className="btn btn-secondary" onClick={handleLoadMore}>
+                                            Load More ({filteredExercises.length - exercisesShown} remaining)
+                                        </button>
+                                    </div>
+                                )}
+                            </>
+                        )}
+                    </div>
+                )}
+
+                {/* Users Tab */}
+                {activeTab === 'users' && (
+                    <div className="admin-section">
+                        <div className="section-header">
+                            <h2>Manage Users</h2>
+                            <button
+                                className="btn btn-primary"
+                                onClick={() => setShowUserForm(true)}
+                            >
+                                <Plus size={18} />
+                                Add User
+                            </button>
                         </div>
+
+                        <div className="admin-filters">
+                            <div className="admin-search">
+                                <Search size={16} />
+                                <input
+                                    type="text"
+                                    className="input"
+                                    placeholder="Search by name, email, or username..."
+                                    value={userSearch}
+                                    onChange={(e) => setUserSearch(e.target.value)}
+                                />
+                            </div>
+                        </div>
+
+                        {filteredUsers.length === 0 ? (
+                            <div className="empty-state">
+                                <Users size={40} />
+                                <p>{userSearch ? 'No users match your search.' : 'No users found.'}</p>
+                            </div>
+                        ) : (
+                            <div className="users-list">
+                                {filteredUsers.map(user => (
+                                    <div key={user.id} className="user-row">
+                                        <div className="user-avatar-placeholder">
+                                            {(user.name || user.email || '?')[0].toUpperCase()}
+                                        </div>
+                                        <div className="user-info">
+                                            <div className="user-name">
+                                                {user.name}
+                                                {user.username && (
+                                                    <span className="user-username">@{user.username}</span>
+                                                )}
+                                            </div>
+                                            <span className="user-email">{user.email}</span>
+                                        </div>
+                                        <span className={`badge ${user.role === 'admin' ? 'badge-primary' : 'badge-info'}`}>
+                                            {user.role}
+                                        </span>
+                                        <span className="user-date">
+                                            {user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', {
+                                                month: 'short', day: 'numeric', year: 'numeric'
+                                            }) : '—'}
+                                        </span>
+                                        <div className="user-actions-cell">
+                                            <button
+                                                className="btn btn-ghost btn-icon btn-sm"
+                                                onClick={() => handleEditUser(user)}
+                                                title="Edit user"
+                                            >
+                                                <Edit size={16} />
+                                            </button>
+                                            {user.id !== currentUser?.id && (
+                                                <button
+                                                    className="btn btn-ghost btn-icon btn-sm"
+                                                    onClick={() => handleDeleteUser(user.id)}
+                                                    title="Delete user"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 )}
 
@@ -508,7 +678,6 @@ const AdminPage = memo(function AdminPage() {
                             </div>
                         </div>
                     </div>
-
                 )}
 
                 {/* User Form Modal */}
@@ -522,6 +691,20 @@ const AdminPage = memo(function AdminPage() {
                                 </button>
                             </div>
                             <div className="modal-body">
+                                {!editingUser && (
+                                    <div className="input-group">
+                                        <label className="input-label">Username *</label>
+                                        <input
+                                            type="text"
+                                            name="username"
+                                            className="input"
+                                            placeholder="johndoe"
+                                            value={userFormData.username}
+                                            onChange={handleUserInputChange}
+                                        />
+                                    </div>
+                                )}
+
                                 <div className="input-group">
                                     <label className="input-label">Name *</label>
                                     <input
@@ -543,7 +726,7 @@ const AdminPage = memo(function AdminPage() {
                                         placeholder="john@example.com"
                                         value={userFormData.email}
                                         onChange={handleUserInputChange}
-                                        disabled={!!editingUser} // Email is unique identifierish
+                                        disabled={!!editingUser}
                                     />
                                 </div>
 
@@ -581,7 +764,11 @@ const AdminPage = memo(function AdminPage() {
                                 <button
                                     className="btn btn-primary"
                                     onClick={handleUserSubmit}
-                                    disabled={!userFormData.name.trim() || (!editingUser && !userFormData.password)}
+                                    disabled={
+                                        !userFormData.name.trim() ||
+                                        !userFormData.email.trim() ||
+                                        (!editingUser && (!userFormData.password || !userFormData.username.trim()))
+                                    }
                                 >
                                     <Save size={18} />
                                     {editingUser ? 'Save Changes' : 'Create User'}
@@ -591,7 +778,7 @@ const AdminPage = memo(function AdminPage() {
                     </div>
                 )}
             </div>
-        </div >
+        </div>
     );
 });
 
