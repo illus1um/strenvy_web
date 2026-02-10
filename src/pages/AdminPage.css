@@ -87,7 +87,7 @@
 
 .admin-tabs .tab.active {
     background: var(--color-accent-primary);
-    color: white;
+    color: #000;
 }
 
 /* Section */
@@ -210,15 +210,15 @@
 }
 
 .difficulty-beginner {
-    background-color: #22c55e;
+    background-color: var(--color-accent-primary);
 }
 
 .difficulty-intermediate {
-    background-color: #f59e0b;
+    background-color: var(--color-accent-secondary);
 }
 
 .difficulty-advanced {
-    background-color: #ef4444;
+    background-color: var(--color-text-secondary);
 }
 
 .program-info h3 {

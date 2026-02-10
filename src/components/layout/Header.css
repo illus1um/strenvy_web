@@ -2,10 +2,9 @@
     position: sticky;
     top: 0;
     z-index: 100;
-    background: rgba(10, 10, 15, 0.95);
+    background: rgba(0, 0, 0, 0.92);
     backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--color-border);
-    transition: background var(--transition-base), border var(--transition-base);
 }
 
 .header-container {
@@ -68,8 +67,8 @@
 }
 
 .nav-link.active {
-    color: var(--color-text-on-accent);
-    background: var(--color-accent-primary);
+    color: var(--color-accent-primary);
+    background: var(--color-accent-glow);
     font-weight: 600;
 }
 

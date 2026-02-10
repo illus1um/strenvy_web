@@ -62,9 +62,9 @@ const ProgramsPage = memo(function ProgramsPage() {
 
     const getDifficultyColor = (difficulty) => {
         const colors = {
-            beginner: '#22c55e',
-            intermediate: '#f59e0b',
-            advanced: '#ef4444',
+            beginner: '#e8b800',
+            intermediate: '#c49b00',
+            advanced: '#888888',
         };
         return colors[difficulty] || colors.beginner;
     };

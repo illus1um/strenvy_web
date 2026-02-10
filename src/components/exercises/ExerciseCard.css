@@ -9,8 +9,6 @@
 
 .exercise-card:hover {
     border-color: var(--color-border-hover);
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-lg);
 }
 
 .exercise-card.selectable:hover {
@@ -19,7 +17,6 @@
 
 .exercise-card.selected {
     border-color: var(--color-accent-primary);
-    box-shadow: 0 0 0 2px var(--color-accent-glow);
 }
 
 .exercise-image-container {
@@ -44,11 +41,11 @@
 .selected-overlay {
     position: absolute;
     inset: 0;
-    background: rgba(99, 102, 241, 0.8);
+    background: rgba(232, 184, 0, 0.85);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: white;
+    color: #000;
 }
 
 .exercise-content {

@@ -78,11 +78,13 @@
     gap: 0.25rem;
     margin-left: 0.5rem;
     padding: 0.125rem 0.5rem;
-    background: rgba(99, 102, 241, 0.2);
+    background: var(--color-accent-glow);
     color: var(--color-accent-primary);
-    border-radius: var(--radius-full);
-    font-size: 0.75rem;
-    font-weight: 500;
+    border-radius: 4px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
 }
 
 /* Profile Grid */
@@ -160,8 +162,8 @@
 }
 
 .btn-success {
-    background: var(--color-success);
-    color: white;
+    background: var(--color-accent-primary);
+    color: #000;
 }
 
 /* Responsive */

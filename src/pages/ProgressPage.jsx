@@ -170,11 +170,11 @@ const ProgressPage = memo(function ProgressPage() {
             {
                 label: 'Volume (kg)',
                 data: weeklyData.map(w => w.volume),
-                borderColor: '#fbbf24',
-                backgroundColor: 'rgba(251, 191, 36, 0.1)',
+                borderColor: '#e8b800',
+                backgroundColor: 'rgba(232, 184, 0, 0.08)',
                 fill: true,
                 tension: 0.4,
-                pointBackgroundColor: '#fbbf24',
+                pointBackgroundColor: '#e8b800',
                 pointBorderColor: '#000',
                 pointBorderWidth: 2,
                 pointRadius: 4,
@@ -183,11 +183,11 @@ const ProgressPage = memo(function ProgressPage() {
             {
                 label: 'Workouts',
                 data: weeklyData.map(w => w.count),
-                borderColor: '#8b5cf6',
+                borderColor: '#666666',
                 backgroundColor: 'transparent',
                 fill: false,
                 tension: 0.4,
-                pointBackgroundColor: '#8b5cf6',
+                pointBackgroundColor: '#888888',
                 pointBorderColor: '#000',
                 pointBorderWidth: 2,
                 pointRadius: 4,
@@ -202,13 +202,13 @@ const ProgressPage = memo(function ProgressPage() {
         interaction: { mode: 'index', intersect: false },
         plugins: {
             legend: {
-                labels: { color: '#a1a1aa', usePointStyle: true },
+                labels: { color: '#888888', usePointStyle: true },
             },
             tooltip: {
-                backgroundColor: '#1a1a24',
-                titleColor: '#ffffff',
-                bodyColor: '#a1a1aa',
-                borderColor: 'rgba(255, 255, 255, 0.1)',
+                backgroundColor: '#0a0a0a',
+                titleColor: '#f0f0f0',
+                bodyColor: '#888888',
+                borderColor: 'rgba(255, 255, 255, 0.06)',
                 borderWidth: 1,
             }
         },
@@ -216,20 +216,20 @@ const ProgressPage = memo(function ProgressPage() {
             y: {
                 beginAtZero: true,
                 position: 'left',
-                grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                ticks: { color: '#71717a' },
-                title: { display: true, text: 'Volume (kg)', color: '#71717a' },
+                grid: { color: 'rgba(255, 255, 255, 0.03)' },
+                ticks: { color: '#555555' },
+                title: { display: true, text: 'Volume (kg)', color: '#555555' },
             },
             y1: {
                 beginAtZero: true,
                 position: 'right',
                 grid: { drawOnChartArea: false },
-                ticks: { color: '#71717a', stepSize: 1 },
-                title: { display: true, text: 'Workouts', color: '#71717a' },
+                ticks: { color: '#555555', stepSize: 1 },
+                title: { display: true, text: 'Workouts', color: '#555555' },
             },
             x: {
                 grid: { display: false },
-                ticks: { color: '#71717a' },
+                ticks: { color: '#555555' },
             },
         },
     };
@@ -240,9 +240,9 @@ const ProgressPage = memo(function ProgressPage() {
             {
                 data: Object.values(muscleDistribution),
                 backgroundColor: [
-                    '#fbbf24', '#d97706', '#f59e0b', '#b45309',
-                    '#6366f1', '#8b5cf6', '#22c55e', '#ef4444',
-                    '#ec4899', '#14b8a6', '#f97316', '#06b6d4',
+                    '#e8b800', '#c49b00', '#d4a800', '#a88200',
+                    '#8c6d00', '#f0c800', '#ffd633', '#bfa300',
+                    '#735800', '#e0ad00', '#ccaa33', '#997a00',
                 ],
                 borderWidth: 0,
             },
@@ -255,7 +255,7 @@ const ProgressPage = memo(function ProgressPage() {
         plugins: {
             legend: {
                 position: 'right',
-                labels: { color: '#a1a1aa', padding: 16, font: { size: 12 } },
+                labels: { color: '#888888', padding: 16, font: { size: 12 } },
             },
         },
     };

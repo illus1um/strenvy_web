@@ -64,9 +64,7 @@
 }
 
 .program-card:hover {
-    transform: translateY(-2px);
     border-color: var(--color-border-hover);
-    box-shadow: var(--shadow-lg);
 }
 
 .program-header {
@@ -83,11 +81,12 @@
 }
 
 .difficulty-badge {
-    font-size: 0.75rem;
-    font-weight: 500;
-    padding: 0.25rem 0.75rem;
-    border-radius: 9999px;
-    text-transform: capitalize;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    padding: 0.1875rem 0.625rem;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
 }
 
 .program-name {

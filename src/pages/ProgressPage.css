@@ -47,23 +47,23 @@
 }
 
 .stat-icon-streak {
-    background-color: rgba(239, 68, 68, 0.15);
-    color: #ef4444;
+    background-color: var(--color-accent-glow);
+    color: var(--color-accent-primary);
 }
 
 .stat-icon-workouts {
-    background-color: rgba(251, 191, 36, 0.15);
-    color: #fbbf24;
+    background-color: var(--color-accent-glow);
+    color: var(--color-accent-primary);
 }
 
 .stat-icon-exercises {
-    background-color: rgba(217, 119, 6, 0.15);
-    color: #d97706;
+    background-color: var(--color-accent-glow);
+    color: var(--color-accent-primary);
 }
 
 .stat-icon-volume {
-    background-color: rgba(34, 197, 94, 0.15);
-    color: #22c55e;
+    background-color: var(--color-accent-glow);
+    color: var(--color-accent-primary);
 }
 
 .stat-info {
@@ -123,7 +123,7 @@
 }
 
 .error-text {
-    color: #ef4444;
+    color: var(--color-error);
     margin-bottom: 1rem;
 }
 
@@ -225,7 +225,7 @@
 }
 
 .filter-btn.active {
-    background: var(--color-accent-primary, #fbbf24);
+    background: var(--color-accent-primary);
     color: #000;
 }
 
