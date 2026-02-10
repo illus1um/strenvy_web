@@ -22,7 +22,7 @@ const MONTH_NAMES = [
 
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-const ProgramForm = memo(function ProgramForm({ onClose, editingId }) {
+const ProgramForm = memo(function ProgramForm({ onClose, editingId, isAdmin }) {
     const dispatch = useDispatch();
     const { editingProgram } = useSelector(state => state.programs);
     const { filtered: exercises, loading } = useSelector(state => state.exercises);
@@ -279,6 +279,7 @@ const ProgramForm = memo(function ProgramForm({ onClose, editingId }) {
             daysPerWeek: [], // Legacy field
             schedule: {}, // Legacy field
             id: editingId,
+            ...(isAdmin ? { isAdmin: true } : {}),
         };
 
         if (editingId) {

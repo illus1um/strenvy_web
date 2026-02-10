@@ -17,29 +17,19 @@ import {
     Filter,
 } from 'lucide-react';
 import {
-    createProgram,
-    editProgram,
-    removeProgram
+    removeProgram,
+    setEditingProgram,
 } from '../store/slices/programsSlice';
-import { fetchExercises } from '../store/slices/exercisesSlice';
+import { fetchExercises, editExercise } from '../store/slices/exercisesSlice';
 import {
     fetchUsers,
     createUser,
     updateUser,
     deleteUser
 } from '../store/slices/usersSlice';
+import ProgramForm from '../components/programs/ProgramForm';
 import Loading from '../components/common/Loading';
 import './AdminPage.css';
-
-const DAYS = [
-    { key: 'monday', label: 'Mon' },
-    { key: 'tuesday', label: 'Tue' },
-    { key: 'wednesday', label: 'Wed' },
-    { key: 'thursday', label: 'Thu' },
-    { key: 'friday', label: 'Fri' },
-    { key: 'saturday', label: 'Sat' },
-    { key: 'sunday', label: 'Sun' },
-];
 
 const EXERCISES_PER_PAGE = 24;
 
@@ -53,7 +43,7 @@ const AdminPage = memo(function AdminPage() {
     const [activeTab, setActiveTab] = useState('programs');
     const [showForm, setShowForm] = useState(false);
     const [showUserForm, setShowUserForm] = useState(false);
-    const [editingProgram, setEditingProgram] = useState(null);
+    const [editingId, setEditingId] = useState(null);
     const [editingUser, setEditingUser] = useState(null);
     const [expandedProgram, setExpandedProgram] = useState(null);
 
@@ -63,15 +53,9 @@ const AdminPage = memo(function AdminPage() {
     const [exerciseBodyPart, setExerciseBodyPart] = useState('');
     const [exercisesShown, setExercisesShown] = useState(EXERCISES_PER_PAGE);
 
-    // Form state
-    const [formData, setFormData] = useState({
-        name: '',
-        description: '',
-        duration: 4,
-        difficulty: 'beginner',
-        daysPerWeek: [],
-        schedule: {},
-    });
+    // Exercise edit state
+    const [editingExercise, setEditingExercise] = useState(null);
+    const [exerciseFormData, setExerciseFormData] = useState(null);
 
     // User Form state
     const [userFormData, setUserFormData] = useState({
@@ -118,46 +102,16 @@ const AdminPage = memo(function AdminPage() {
         return result;
     }, [exercises, exerciseSearch, exerciseBodyPart]);
 
-    const handleInputChange = useCallback((e) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
-    }, []);
-
     const handleUserInputChange = useCallback((e) => {
         const { name, value } = e.target;
         setUserFormData(prev => ({ ...prev, [name]: value }));
     }, []);
 
-    const handleDayToggle = useCallback((day) => {
-        setFormData(prev => {
-            const isSelected = prev.daysPerWeek.includes(day);
-            const newDays = isSelected
-                ? prev.daysPerWeek.filter(d => d !== day)
-                : [...prev.daysPerWeek, day];
-
-            const newSchedule = { ...prev.schedule };
-            if (!isSelected) {
-                newSchedule[day] = { name: `${day} Workout`, exercises: [] };
-            } else {
-                delete newSchedule[day];
-            }
-
-            return { ...prev, daysPerWeek: newDays, schedule: newSchedule };
-        });
-    }, []);
-
     const handleEditProgram = useCallback((program) => {
-        setEditingProgram(program);
-        setFormData({
-            name: program.name,
-            description: program.description,
-            duration: program.duration,
-            difficulty: program.difficulty,
-            daysPerWeek: program.daysPerWeek,
-            schedule: program.schedule,
-        });
+        setEditingId(program.id);
+        dispatch(setEditingProgram(program));
         setShowForm(true);
-    }, []);
+    }, [dispatch]);
 
     const handleEditUser = useCallback((user) => {
         setEditingUser(user);
@@ -183,46 +137,11 @@ const AdminPage = memo(function AdminPage() {
         }
     }, [dispatch]);
 
-    const handleSubmit = useCallback(() => {
-        if (!formData.name.trim()) return;
-
-        if (editingProgram) {
-            dispatch(editProgram({
-                id: editingProgram.id,
-                ...formData,
-                isAdmin: true
-            }));
-        } else {
-            dispatch(createProgram({
-                ...formData,
-                isAdmin: true
-            }));
-        }
-
-        setShowForm(false);
-        setEditingProgram(null);
-        setFormData({
-            name: '',
-            description: '',
-            duration: 4,
-            difficulty: 'beginner',
-            daysPerWeek: [],
-            schedule: {},
-        });
-    }, [formData, editingProgram, dispatch]);
-
     const handleCloseForm = useCallback(() => {
         setShowForm(false);
-        setEditingProgram(null);
-        setFormData({
-            name: '',
-            description: '',
-            duration: 4,
-            difficulty: 'beginner',
-            daysPerWeek: [],
-            schedule: {},
-        });
-    }, []);
+        setEditingId(null);
+        dispatch(setEditingProgram(null));
+    }, [dispatch]);
 
     const handleUserSubmit = useCallback(() => {
         if (!userFormData.name.trim() || !userFormData.email.trim()) return;
@@ -267,6 +186,60 @@ const AdminPage = memo(function AdminPage() {
 
     const handleLoadMore = useCallback(() => {
         setExercisesShown(prev => prev + EXERCISES_PER_PAGE);
+    }, []);
+
+    const handleEditExercise = useCallback((exercise) => {
+        setEditingExercise(exercise);
+        setExerciseFormData({
+            name: exercise.name,
+            bodyPart: exercise.bodyPart,
+            equipment: exercise.equipment,
+            target: exercise.target,
+            secondaryMuscles: exercise.secondaryMuscles || [],
+            instructions: exercise.instructions || [],
+        });
+    }, []);
+
+    const handleExerciseFormChange = useCallback((field, value) => {
+        setExerciseFormData(prev => ({ ...prev, [field]: value }));
+    }, []);
+
+    const handleAddArrayItem = useCallback((field) => {
+        setExerciseFormData(prev => ({
+            ...prev,
+            [field]: [...prev[field], ''],
+        }));
+    }, []);
+
+    const handleUpdateArrayItem = useCallback((field, index, value) => {
+        setExerciseFormData(prev => ({
+            ...prev,
+            [field]: prev[field].map((item, i) => i === index ? value : item),
+        }));
+    }, []);
+
+    const handleRemoveArrayItem = useCallback((field, index) => {
+        setExerciseFormData(prev => ({
+            ...prev,
+            [field]: prev[field].filter((_, i) => i !== index),
+        }));
+    }, []);
+
+    const handleExerciseSubmit = useCallback(() => {
+        if (!editingExercise || !exerciseFormData.name.trim()) return;
+        dispatch(editExercise({
+            id: editingExercise.id,
+            ...exerciseFormData,
+            secondaryMuscles: exerciseFormData.secondaryMuscles.filter(s => s.trim()),
+            instructions: exerciseFormData.instructions.filter(s => s.trim()),
+        }));
+        setEditingExercise(null);
+        setExerciseFormData(null);
+    }, [editingExercise, exerciseFormData, dispatch]);
+
+    const handleCloseExerciseForm = useCallback(() => {
+        setEditingExercise(null);
+        setExerciseFormData(null);
     }, []);
 
     // Stats
@@ -384,7 +357,11 @@ const AdminPage = memo(function AdminPage() {
                                                 <span className={`difficulty-dot difficulty-${program.difficulty}`} />
                                                 <h3>{program.name}</h3>
                                                 <span className="program-meta-inline">
-                                                    {program.duration} weeks &bull; {program.daysPerWeek.length} days/week
+                                                    {program.duration} weeks &bull; {
+                                                        (program.scheduleDates && Object.keys(program.scheduleDates).length > 0)
+                                                            ? `${Object.keys(program.scheduleDates).length} days`
+                                                            : `${program.daysPerWeek?.length || 0} days/week`
+                                                    }
                                                 </span>
                                             </div>
                                             <div className="program-actions">
@@ -417,10 +394,14 @@ const AdminPage = memo(function AdminPage() {
                                             <div className="program-details">
                                                 <p>{program.description}</p>
                                                 <div className="schedule-preview">
-                                                    {Object.entries(program.schedule).map(([day, workout]) => (
+                                                    {Object.entries(
+                                                        (program.scheduleDates && Object.keys(program.scheduleDates).length > 0)
+                                                            ? program.scheduleDates
+                                                            : (program.schedule || {})
+                                                    ).map(([day, workout]) => (
                                                         <div key={day} className="day-preview">
                                                             <strong>{day}</strong>: {workout.name}
-                                                            {workout.exercises.length > 0 && (
+                                                            {workout.exercises?.length > 0 && (
                                                                 <span className="exercise-count">
                                                                     ({workout.exercises.length} exercises)
                                                                 </span>
@@ -480,7 +461,11 @@ const AdminPage = memo(function AdminPage() {
                             <>
                                 <div className="exercises-preview">
                                     {filteredExercises.slice(0, exercisesShown).map(exercise => (
-                                        <div key={exercise.id} className="exercise-preview-card">
+                                        <div
+                                            key={exercise.id}
+                                            className="exercise-preview-card clickable"
+                                            onClick={() => handleEditExercise(exercise)}
+                                        >
                                             <img
                                                 src={exercise.localPng || exercise.localGif}
                                                 alt={exercise.name}
@@ -488,6 +473,9 @@ const AdminPage = memo(function AdminPage() {
                                             />
                                             <span className="exercise-preview-name">{exercise.name}</span>
                                             <span className="exercise-preview-body">{exercise.bodyPart}</span>
+                                            <div className="exercise-edit-overlay">
+                                                <Edit size={16} />
+                                            </div>
                                         </div>
                                     ))}
                                 </div>
@@ -586,94 +574,146 @@ const AdminPage = memo(function AdminPage() {
 
                 {/* Program Form Modal */}
                 {showForm && (
-                    <div className="modal-overlay" onClick={handleCloseForm}>
-                        <div className="modal admin-form-modal" onClick={e => e.stopPropagation()}>
+                    <ProgramForm
+                        onClose={handleCloseForm}
+                        editingId={editingId}
+                        isAdmin
+                    />
+                )}
+
+                {/* Exercise Edit Modal */}
+                {editingExercise && exerciseFormData && (
+                    <div className="modal-overlay" onClick={handleCloseExerciseForm}>
+                        <div className="modal exercise-edit-modal" onClick={e => e.stopPropagation()}>
                             <div className="modal-header">
-                                <h2>{editingProgram ? 'Edit Program' : 'Add Program'}</h2>
-                                <button className="btn btn-ghost btn-icon" onClick={handleCloseForm}>
+                                <h2>Edit Exercise</h2>
+                                <button className="btn btn-ghost btn-icon" onClick={handleCloseExerciseForm}>
                                     <X size={20} />
                                 </button>
                             </div>
-                            <div className="modal-body">
-                                <div className="input-group">
-                                    <label className="input-label">Program Name *</label>
-                                    <input
-                                        type="text"
-                                        name="name"
-                                        className="input"
-                                        placeholder="e.g., Advanced Strength Program"
-                                        value={formData.name}
-                                        onChange={handleInputChange}
-                                    />
-                                </div>
-
-                                <div className="input-group">
-                                    <label className="input-label">Description</label>
-                                    <textarea
-                                        name="description"
-                                        className="input"
-                                        placeholder="Describe the program..."
-                                        rows={3}
-                                        value={formData.description}
-                                        onChange={handleInputChange}
-                                    />
-                                </div>
-
-                                <div className="form-row">
-                                    <div className="input-group">
-                                        <label className="input-label">Duration (weeks)</label>
-                                        <input
-                                            type="number"
-                                            name="duration"
-                                            className="input"
-                                            min={1}
-                                            max={52}
-                                            value={formData.duration}
-                                            onChange={handleInputChange}
+                            <div className="modal-body exercise-edit-body">
+                                <div className="exercise-edit-layout">
+                                    {/* GIF Preview (read-only) */}
+                                    <div className="exercise-gif-preview">
+                                        <img
+                                            src={editingExercise.localGif || editingExercise.localPng}
+                                            alt={editingExercise.name}
                                         />
                                     </div>
-                                    <div className="input-group">
-                                        <label className="input-label">Difficulty</label>
-                                        <select
-                                            name="difficulty"
-                                            className="input select"
-                                            value={formData.difficulty}
-                                            onChange={handleInputChange}
-                                        >
-                                            <option value="beginner">Beginner</option>
-                                            <option value="intermediate">Intermediate</option>
-                                            <option value="advanced">Advanced</option>
-                                        </select>
-                                    </div>
-                                </div>
 
-                                <div className="input-group">
-                                    <label className="input-label">Training Days</label>
-                                    <div className="days-selector">
-                                        {DAYS.map(({ key, label }) => (
+                                    {/* Editable fields */}
+                                    <div className="exercise-edit-fields">
+                                        <div className="input-group">
+                                            <label className="input-label">Name *</label>
+                                            <input
+                                                type="text"
+                                                className="input"
+                                                value={exerciseFormData.name}
+                                                onChange={(e) => handleExerciseFormChange('name', e.target.value)}
+                                            />
+                                        </div>
+
+                                        <div className="form-row">
+                                            <div className="input-group">
+                                                <label className="input-label">Body Part</label>
+                                                <input
+                                                    type="text"
+                                                    className="input"
+                                                    value={exerciseFormData.bodyPart}
+                                                    onChange={(e) => handleExerciseFormChange('bodyPart', e.target.value)}
+                                                />
+                                            </div>
+                                            <div className="input-group">
+                                                <label className="input-label">Target Muscle</label>
+                                                <input
+                                                    type="text"
+                                                    className="input"
+                                                    value={exerciseFormData.target}
+                                                    onChange={(e) => handleExerciseFormChange('target', e.target.value)}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="input-group">
+                                            <label className="input-label">Equipment</label>
+                                            <input
+                                                type="text"
+                                                className="input"
+                                                value={exerciseFormData.equipment}
+                                                onChange={(e) => handleExerciseFormChange('equipment', e.target.value)}
+                                            />
+                                        </div>
+
+                                        <div className="input-group">
+                                            <label className="input-label">Secondary Muscles</label>
+                                            {exerciseFormData.secondaryMuscles.map((muscle, idx) => (
+                                                <div key={idx} className="array-item-row">
+                                                    <input
+                                                        type="text"
+                                                        className="input"
+                                                        value={muscle}
+                                                        placeholder="e.g., biceps"
+                                                        onChange={(e) => handleUpdateArrayItem('secondaryMuscles', idx, e.target.value)}
+                                                    />
+                                                    <button
+                                                        className="btn btn-ghost btn-icon btn-sm"
+                                                        onClick={() => handleRemoveArrayItem('secondaryMuscles', idx)}
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </div>
+                                            ))}
                                             <button
-                                                key={key}
-                                                type="button"
-                                                className={`day-btn ${formData.daysPerWeek.includes(key) ? 'selected' : ''}`}
-                                                onClick={() => handleDayToggle(key)}
+                                                className="btn btn-ghost btn-sm add-item-btn"
+                                                onClick={() => handleAddArrayItem('secondaryMuscles')}
                                             >
-                                                {label}
+                                                <Plus size={14} />
+                                                Add Muscle
                                             </button>
-                                        ))}
+                                        </div>
+
+                                        <div className="input-group">
+                                            <label className="input-label">Instructions</label>
+                                            {exerciseFormData.instructions.map((instruction, idx) => (
+                                                <div key={idx} className="array-item-row">
+                                                    <span className="instruction-number">{idx + 1}.</span>
+                                                    <textarea
+                                                        className="input"
+                                                        rows={2}
+                                                        value={instruction}
+                                                        placeholder="Describe the step..."
+                                                        onChange={(e) => handleUpdateArrayItem('instructions', idx, e.target.value)}
+                                                    />
+                                                    <button
+                                                        className="btn btn-ghost btn-icon btn-sm"
+                                                        onClick={() => handleRemoveArrayItem('instructions', idx)}
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                            <button
+                                                className="btn btn-ghost btn-sm add-item-btn"
+                                                onClick={() => handleAddArrayItem('instructions')}
+                                            >
+                                                <Plus size={14} />
+                                                Add Step
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                             <div className="modal-footer">
-                                <button className="btn btn-ghost" onClick={handleCloseForm}>
+                                <button className="btn btn-ghost" onClick={handleCloseExerciseForm}>
                                     Cancel
                                 </button>
                                 <button
                                     className="btn btn-primary"
-                                    onClick={handleSubmit}
-                                    disabled={!formData.name.trim()}
+                                    onClick={handleExerciseSubmit}
+                                    disabled={!exerciseFormData.name.trim()}
                                 >
                                     <Save size={18} />
-                                    {editingProgram ? 'Save Changes' : 'Create Program'}
+                                    Save Changes
                                 </button>
                             </div>
                         </div>

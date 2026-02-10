@@ -153,21 +153,23 @@ const ProgramsPage = memo(function ProgramsPage() {
                                     </span>
                                     <span>
                                         <Clock size={16} />
-                                        {program.daysPerWeek?.length || 0} days/week
+                                        {getScheduleDaysCount(program)} days
                                     </span>
                                 </div>
-                                <div className="program-days">
-                                    {['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'].map(day => (
-                                        <span
-                                            key={day}
-                                            className={`day-dot ${(program.daysPerWeek || []).some(d => d.startsWith(day)) ? 'active' : ''
-                                                }`}
-                                            title={day}
-                                        >
-                                            {day[0].toUpperCase()}
-                                        </span>
-                                    ))}
-                                </div>
+                                {program.daysPerWeek?.length > 0 && (
+                                    <div className="program-days">
+                                        {['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'].map(day => (
+                                            <span
+                                                key={day}
+                                                className={`day-dot ${(program.daysPerWeek || []).some(d => d.startsWith(day)) ? 'active' : ''
+                                                    }`}
+                                                title={day}
+                                            >
+                                                {day[0].toUpperCase()}
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
                                 <button
                                     className="btn btn-primary program-start"
                                     onClick={() => handleStartProgram(program.id)}

@@ -1,12 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { api } from '../../utils/api';
-
-// Helper to extract image ID from URL
-const getImageId = (url) => {
-    if (!url) return null;
-    const parts = url.split('/');
-    return parts[parts.length - 1];
-};
+import { api, authFetch } from '../../utils/api';
 
 // Async thunk to load exercises
 export const fetchExercises = createAsyncThunk(
@@ -15,6 +8,22 @@ export const fetchExercises = createAsyncThunk(
         try {
             const response = await fetch(api.exercises);
             if (!response.ok) throw new Error('Failed to fetch exercises');
+            return await response.json();
+        } catch (error) {
+            return rejectWithValue(error.message);
+        }
+    }
+);
+
+export const editExercise = createAsyncThunk(
+    'exercises/editExercise',
+    async ({ id, ...updates }, { rejectWithValue }) => {
+        try {
+            const response = await authFetch(`${api.exercises}/${id}`, {
+                method: 'PUT',
+                body: JSON.stringify(updates),
+            });
+            if (!response.ok) throw new Error('Failed to update exercise');
             return await response.json();
         } catch (error) {
             return rejectWithValue(error.message);
@@ -70,6 +79,15 @@ const exercisesSlice = createSlice({
             .addCase(fetchExercises.rejected, (state, action) => {
                 state.loading = false;
                 state.error = action.payload;
+            })
+            .addCase(editExercise.fulfilled, (state, action) => {
+                const updated = action.payload;
+                const updateIn = (arr) => arr.map(e => e.id === updated.id ? { ...e, ...updated } : e);
+                state.items = updateIn(state.items);
+                state.filtered = updateIn(state.filtered);
+                state.bodyParts = [...new Set(state.items.map(e => e.bodyPart))].sort();
+                state.equipments = [...new Set(state.items.map(e => e.equipment))].sort();
+                state.targets = [...new Set(state.items.map(e => e.target))].sort();
             });
     },
 });

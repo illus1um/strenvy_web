@@ -407,6 +407,94 @@
     flex-shrink: 0;
 }
 
+/* Exercise card clickable */
+.exercise-preview-card.clickable {
+    cursor: pointer;
+    position: relative;
+}
+
+.exercise-edit-overlay {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s;
+    color: var(--color-text-secondary);
+}
+
+.exercise-preview-card.clickable:hover .exercise-edit-overlay {
+    opacity: 1;
+}
+
+/* Exercise Edit Modal */
+.exercise-edit-modal {
+    max-width: 720px;
+    width: 90vw;
+}
+
+.exercise-edit-body {
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.exercise-edit-layout {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 1.5rem;
+}
+
+.exercise-gif-preview {
+    position: sticky;
+    top: 0;
+}
+
+.exercise-gif-preview img {
+    width: 100%;
+    border-radius: var(--radius-md);
+    background: var(--color-bg-tertiary);
+}
+
+.exercise-edit-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.array-item-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.array-item-row .input {
+    flex: 1;
+}
+
+.instruction-number {
+    padding-top: 10px;
+    font-weight: 600;
+    color: var(--color-text-tertiary);
+    min-width: 24px;
+}
+
+.add-item-btn {
+    align-self: flex-start;
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    color: var(--color-accent-primary);
+    font-size: 0.8125rem;
+}
+
 /* Form Modal */
 .admin-form-modal {
     max-width: 500px;
@@ -445,6 +533,16 @@
 
     .exercises-preview {
         grid-template-columns: repeat(3, 1fr);
+    }
+
+    .exercise-edit-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .exercise-gif-preview {
+        position: static;
+        max-width: 200px;
+        margin: 0 auto;
     }
 
     .form-row {
