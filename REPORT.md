@@ -1,299 +1,558 @@
 # Strenvy - Technical Report
 
-## Обзор проекта
+## 1. Project Overview
 
-**Strenvy** — это Single Page Application (SPA) для планирования фитнес-тренировок, построенное на React + Redux Toolkit. Приложение позволяет пользователям просматривать библиотеку упражнений, создавать индивидуальные тренировочные программы и отслеживать прогресс.
+**Strenvy** is a full-scale Single Page Application (SPA) for fitness workout planning and tracking, built with React 19 and Redux Toolkit. The application features a real Express.js + MongoDB backend with JWT authentication, email verification, and a RESTful API. Users can browse 1300+ exercises, create custom training programs with a calendar-based scheduler, run live workout sessions with set/rep tracking, and monitor progress through charts and statistics.
 
-## Архитектура
+---
+
+## 2. Architecture Description
 
 ### Container/Presenter Pattern
 
+The application follows a strict separation between container components (pages with business logic and Redux access) and presentational components (pure UI driven by props).
+
 ```
-src/
-├── components/          # Presentational компоненты (только UI)
-│   ├── common/         # Переиспользуемые: Button, Modal, Loading
-│   ├── exercises/      # ExerciseCard, ExerciseFilter, ExerciseModal
-│   ├── programs/       # ProgramForm
-│   └── layout/         # Header
-├── pages/              # Page-level компоненты (контейнеры с логикой)
-│   ├── HomePage.jsx
-│   ├── ExercisesPage.jsx
-│   ├── ProgramsPage.jsx
-│   ├── ProgressPage.jsx
-│   └── ProfilePage.jsx
-└── store/              # Redux state management
-    ├── index.js
-    └── slices/
-        ├── exercisesSlice.js
-        ├── workoutsSlice.js
-        ├── programsSlice.js
-        ├── progressSlice.js
-        └── userSlice.js
+strenvy/src/
+├── pages/                    # Containers — business logic, Redux, API
+│   ├── HomePage.jsx          # Dashboard with active program, today's workout
+│   ├── ExercisesPage.jsx     # Exercise library with filtering & pagination
+│   ├── ProgramsPage.jsx      # Program management (create, edit, activate)
+│   ├── ProgressPage.jsx      # Workout history, stats, Chart.js graphs
+│   ├── ProfilePage.jsx       # User profile, preferences, goals
+│   ├── AdminPage.jsx         # Admin panel (users, exercises, programs CRUD)
+│   ├── WorkoutSessionPage.jsx# Live session with set/rep tracking
+│   ├── LoginPage.jsx         # Authentication
+│   ├── RegisterPage.jsx      # Registration with validation
+│   ├── VerifyEmailPage.jsx   # Email verification flow
+│   ├── ForgotPasswordPage.jsx# Password recovery
+│   └── ResetPasswordPage.jsx # Password reset with token
+│
+├── components/               # Presenters — pure UI, no Redux
+│   ├── common/
+│   │   ├── PrivateRoute.jsx  # Auth guard (memo)
+│   │   ├── AdminRoute.jsx    # Admin guard
+│   │   └── Loading.jsx       # Loading spinner (memo)
+│   ├── exercises/
+│   │   ├── ExerciseCard.jsx  # Exercise display card (memo + useCallback)
+│   │   ├── ExerciseFilter.jsx# Filter controls (memo + useCallback)
+│   │   └── ExerciseModal.jsx # Exercise detail modal (memo)
+│   ├── programs/
+│   │   └── ProgramForm.jsx   # Complex multi-step form (memo + useMemo + useCallback)
+│   └── layout/
+│       └── Header.jsx        # Navigation header (memo)
+│
+├── store/                    # Redux Toolkit state management
+│   ├── index.js              # Store configuration (7 slices)
+│   └── slices/
+│       ├── userSlice.js      # Auth: register, login, checkAuth, logout, verify, reset (11 thunks)
+│       ├── programsSlice.js  # Programs CRUD + active program (4 thunks + 3 sync)
+│       ├── exercisesSlice.js # Exercise library + filtering (2 thunks + 2 sync)
+│       ├── workoutsSlice.js  # Workout templates CRUD (4 thunks + 3 sync)
+│       ├── progressSlice.js  # History, stats, selectors (4 thunks + 2 selectors)
+│       ├── sessionSlice.js   # Live session state (7 sync reducers + localStorage)
+│       └── usersSlice.js     # Admin user management (4 thunks + 1 sync)
+│
+├── utils/
+│   └── api.js                # API config + authFetch with automatic token refresh
+│
+├── tests/                    # Unit & component tests (133 tests)
+│   ├── exercisesSlice.test.js
+│   ├── programsSlice.test.js
+│   ├── progressSlice.test.js
+│   ├── workoutsSlice.test.js
+│   ├── userSlice.test.js
+│   ├── sessionSlice.test.js
+│   ├── usersSlice.test.js
+│   ├── components/
+│   │   ├── Loading.test.jsx
+│   │   ├── PrivateRoute.test.jsx
+│   │   ├── AdminRoute.test.jsx
+│   │   ├── ExerciseCard.test.jsx
+│   │   └── ExerciseFilter.test.jsx
+│   └── setup.js
+│
+├── App.jsx                   # Root: Provider + BrowserRouter + lazy routes
+├── main.jsx                  # Entry point
+└── index.css                 # Global styles
+
+backend/                      # Express.js REST API
+├── models/                   # Mongoose schemas (User, Program, Exercise, Workout, History)
+├── routes/                   # API endpoints (auth, programs, exercises, workouts, history, user, users)
+├── middleware/                # JWT auth middleware
+├── utils/                    # Email service (Gmail SMTP)
+├── server.js                 # Express server setup
+└── db.js                     # MongoDB connection
 ```
 
-### Диаграмма компонентов
+### Component Diagram
 
 ```mermaid
 graph TB
-    App[App.jsx]
-    App --> Header[Header]
-    App --> Router[React Router]
-    
-    Router --> Home[HomePage]
-    Router --> Exercises[ExercisesPage]
-    Router --> Programs[ProgramsPage]
-    Router --> Progress[ProgressPage - Protected]
-    Router --> Profile[ProfilePage]
-    
-    Exercises --> ExCard[ExerciseCard x N]
-    Exercises --> ExFilter[ExerciseFilter]
-    Exercises --> ExModal[ExerciseModal]
-    
-    Programs --> ProgCard[ProgramCard x N]
-    Programs --> ProgForm[ProgramForm Modal]
-    
-    Progress --> Charts[Chart.js Charts]
-    Progress --> History[Workout History]
-    
-    Store[(Redux Store)]
-    Store --> ExSlice[exercisesSlice]
-    Store --> WorkSlice[workoutsSlice]
-    Store --> ProgSlice[programsSlice]
-    Store --> ProgressSlice[progressSlice]
-    Store --> UserSlice[userSlice]
+    App[App.jsx — Provider + Router]
+    App --> Header[Header — memo]
+    App --> Suspense[Suspense + Loading fallback]
+
+    Suspense --> Public[Public Routes]
+    Suspense --> Private[PrivateRoute Guard]
+    Suspense --> Admin[AdminRoute Guard]
+
+    Public --> Login[LoginPage]
+    Public --> Register[RegisterPage]
+    Public --> Verify[VerifyEmailPage]
+    Public --> Forgot[ForgotPasswordPage]
+    Public --> Reset[ResetPasswordPage]
+
+    Private --> Home[HomePage]
+    Private --> Exercises[ExercisesPage]
+    Private --> Programs[ProgramsPage]
+    Private --> Progress[ProgressPage]
+    Private --> Profile[ProfilePage]
+    Private --> Session[WorkoutSessionPage]
+
+    Admin --> AdminPage[AdminPage]
+
+    Exercises --> ExCard[ExerciseCard x N — memo]
+    Exercises --> ExFilter[ExerciseFilter — memo]
+    Exercises --> ExModal[ExerciseModal — memo]
+
+    Programs --> ProgForm[ProgramForm — memo + useMemo + useCallback]
+
+    Progress --> Charts[Chart.js — Line + Doughnut]
+
+    Store[(Redux Store — 7 slices)]
+    Store -.-> UserSlice[userSlice — 11 async thunks]
+    Store -.-> ProgSlice[programsSlice — 4 async thunks]
+    Store -.-> ExSlice[exercisesSlice — 2 async thunks]
+    Store -.-> WorkSlice[workoutsSlice — 4 async thunks]
+    Store -.-> ProgressSlice[progressSlice — 4 async thunks]
+    Store -.-> SessionSlice[sessionSlice — 7 sync reducers]
+    Store -.-> UsersSlice[usersSlice — 4 async thunks]
+
+    API[Backend API — Express + MongoDB]
+    Store ==> API
+```
+
+### Data Flow
+
+```
+User Interaction
+  → Page (Container) dispatches Redux thunk
+    → authFetch() sends request with httpOnly cookies
+      → Backend validates JWT, processes request
+        → Response returns to thunk
+          → extraReducers update Redux state
+            → useSelector triggers component re-render
+              → Presenter components receive new props
 ```
 
 ---
 
-## Технический стек
+## 3. Technical Justification
 
-| Технология | Версия | Назначение |
-|-----------|--------|------------|
-| React | 19.2.0 | UI библиотека |
-| Redux Toolkit | 2.11.2 | State management |
-| React Router | 7.13.0 | Маршрутизация |
-| Chart.js | 4.5.1 | Визуализация графиков |
-| Lucide React | 0.563.0 | Иконки |
-| Vite | 7.2.4 | Сборка проекта |
-| Vitest | 4.0.18 | Unit-тестирование |
+### Why React?
+
+| Factor | React | Angular |
+|--------|-------|---------|
+| Learning curve | Gradual, component-focused | Steep, full framework |
+| Bundle size | ~45KB (react + react-dom) | ~150KB+ (core framework) |
+| Ecosystem flexibility | Choose your own tools | Opinionated, built-in |
+| Performance tuning | memo, useMemo, useCallback | OnPush, trackBy |
+| State management | Redux Toolkit (mature, typed) | RxJS (powerful but complex) |
+
+React was chosen for its component-centric architecture, rich ecosystem, and explicit performance control. Combined with Redux Toolkit, it provides predictable state management with minimal boilerplate through `createSlice` and `createAsyncThunk`.
+
+### Why Redux Toolkit?
+
+- **`createAsyncThunk`** — eliminates boilerplate for async API calls with built-in pending/fulfilled/rejected lifecycle
+- **`createSlice`** — combines reducer + actions in one declaration with Immer for immutable updates
+- **Centralized state** — single source of truth for 7 domain slices covering auth, programs, exercises, workouts, progress, sessions, and admin
+- **DevTools integration** — full state inspection and time-travel debugging
+
+### Why Real Backend over Mock API?
+
+The project uses a real Express.js + MongoDB backend instead of JSON-Server to demonstrate:
+- JWT authentication with httpOnly cookies (access + refresh tokens)
+- Email verification and password reset via Gmail SMTP
+- Role-based authorization (user/admin)
+- Proper RESTful API design with Mongoose schemas
 
 ---
 
-## Реализованные требования
+## 4. Technical Requirements Implementation
 
-### 1. State Management (Redux Toolkit + Async Thunks)
+### 4.1 State Management (Redux Toolkit + Async Thunks)
+
+**7 Redux slices** with **29 async thunks** and **16 sync reducers**:
 
 ```javascript
-// Async thunk для загрузки упражнений
-export const fetchExercises = createAsyncThunk(
-  'exercises/fetchExercises',
-  async (_, { rejectWithValue }) => {
-    try {
-      const response = await import('../../data/exercises.json');
-      return response.default.map(exercise => ({
-        ...exercise,
-        localGif: `/gifs/${getImageId(exercise.gifUrl)}.gif`,
-      }));
-    } catch (error) {
-      return rejectWithValue(error.message);
+// Example: userSlice.js — login thunk with JWT cookies
+export const loginUser = createAsyncThunk(
+    'user/login',
+    async ({ email, password }, { rejectWithValue }) => {
+        try {
+            const response = await fetch(`${api.auth}/login`, {
+                method: 'POST',
+                credentials: 'include', // httpOnly cookies
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password }),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Login failed');
+            return data.user;
+        } catch (error) {
+            return rejectWithValue(error.message);
+        }
     }
-  }
 );
 ```
 
-**Слайсы:**
-- `exercisesSlice` — загрузка ~1300 упражнений, фильтрация
-- `workoutsSlice` — CRUD для тренировок (localStorage)
-- `programsSlice` — программы (админские + пользовательские)
-- `progressSlice` — история тренировок и статистика
-- `userSlice` — аутентификация и настройки
+```javascript
+// Example: programsSlice.js — extraReducers with state separation
+.addCase(fetchPrograms.fulfilled, (state, action) => {
+    state.loading = false;
+    if (Array.isArray(action.payload)) {
+        state.adminPrograms = action.payload.filter(p => p.isAdmin);
+        state.userPrograms = action.payload.filter(p => !p.isAdmin);
+    }
+})
+```
 
-### 2. Routing (Nested, Protected, Lazy Loading)
+### 4.2 Routing (Protected Routes + Lazy Loading)
+
+**12 routes** with two levels of protection and lazy loading on all pages:
 
 ```javascript
-// Lazy loading страниц
+// App.jsx — Lazy loading with Suspense
 const HomePage = lazy(() => import('./pages/HomePage'));
 const ExercisesPage = lazy(() => import('./pages/ExercisesPage'));
 const ProgramsPage = lazy(() => import('./pages/ProgramsPage'));
-const ProgressPage = lazy(() => import('./pages/ProgressPage'));
-const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+// ... 9 more lazy-loaded pages
 
-// Protected route
-<Route 
-  path="/progress" 
-  element={
-    <PrivateRoute>
-      <ProgressPage />
-    </PrivateRoute>
-  } 
-/>
+<Suspense fallback={<Loading text="Loading page..." />}>
+  <Routes>
+    {/* Public routes */}
+    <Route path="/login" element={<LoginPage />} />
+    <Route path="/register" element={<RegisterPage />} />
+
+    {/* Protected routes — require authentication */}
+    <Route path="/" element={<PrivateRoute><HomePage /></PrivateRoute>} />
+    <Route path="/exercises" element={<PrivateRoute><ExercisesPage /></PrivateRoute>} />
+
+    {/* Admin routes — require admin role */}
+    <Route path="/admin" element={<AdminRoute><AdminPage /></AdminRoute>} />
+  </Routes>
+</Suspense>
 ```
 
-### 3. Performance Optimization
-
 ```javascript
-// React.memo для presentational компонентов
-const ExerciseCard = memo(function ExerciseCard({ exercise, onSelect }) {
-  // ...
+// PrivateRoute.jsx — Authentication guard
+const PrivateRoute = memo(function PrivateRoute({ children }) {
+    const { isAuthenticated, authChecked } = useSelector(state => state.user);
+    if (!authChecked) return <Loading text="Checking authentication..." />;
+    if (!isAuthenticated) return <Navigate to="/login" state={{ from: location }} replace />;
+    return children;
 });
-
-// useMemo для дорогих вычислений
-const paginatedExercises = useMemo(() => {
-  return filtered.slice(0, page * itemsPerPage);
-}, [filtered, page]);
-
-// useCallback для обработчиков событий
-const handleFilterChange = useCallback((key, value) => {
-  dispatch(setFilter({ key, value }));
-}, [dispatch]);
 ```
-
-### 4. Complex Form with Async Validation
 
 ```javascript
-// Асинхронная валидация имени программы
-const validateName = useCallback(async (name) => {
-  setIsValidating(true);
-  await new Promise(resolve => setTimeout(resolve, 500));
-  setIsValidating(false);
-  return name.length >= 3;
+// AdminRoute.jsx — Role-based guard (extends PrivateRoute logic)
+if (!isAuthenticated) return <Navigate to="/login" />;
+if (!isAdmin) return <Navigate to="/" />;
+return children;
+```
+
+### 4.3 Performance Optimization
+
+**Strategic memoization** applied to all presentational components and expensive computations:
+
+**React.memo** — 8 components wrapped to prevent unnecessary re-renders:
+```javascript
+// ExerciseCard.jsx — memo prevents re-render when parent updates unrelated state
+const ExerciseCard = memo(function ExerciseCard({ exercise, onSelect, onViewDetails, isSelected, selectable }) {
+    // useCallback for stable handler references
+    const handleImageError = useCallback(() => setImageError(true), []);
+    const handleClick = useCallback(() => {
+        if (selectable && onSelect) onSelect(exercise);
+        else if (onViewDetails) onViewDetails(exercise);
+    }, [selectable, onSelect, onViewDetails, exercise]);
+    // ...
+});
+```
+
+**useMemo** — expensive computations cached:
+```javascript
+// HomePage.jsx — find today's workout from program schedule
+const todayWorkout = useMemo(() => {
+    if (!activeProgram) return null;
+    // Complex lookup through schedule/scheduleDates maps
+}, [activeProgram]);
+
+// ProgramForm.jsx — 42-day calendar grid calculation
+const calendarDays = useMemo(() => {
+    const days = [];
+    // Generate 6-week calendar grid with date objects
+    return days;
+}, [currentMonth]);
+
+// AdminPage.jsx — filter users/exercises by search term
+const filteredUsers = useMemo(() =>
+    users.filter(u => u.name?.toLowerCase().includes(searchTerm.toLowerCase())),
+[users, searchTerm]);
+```
+
+**useCallback** — 20+ event handlers stabilized:
+```javascript
+// ExerciseFilter.jsx — stable callbacks for child components
+const handleSearchChange = useCallback((e) => {
+    onFilterChange('search', e.target.value);
+}, [onFilterChange]);
+
+// App.jsx — menu toggle
+const handleMenuToggle = useCallback(() => {
+    setIsMenuOpen(prev => !prev);
 }, []);
+```
 
-// Валидация формы
-const validateStep1 = useCallback(async () => {
-  const newErrors = {};
-  if (!formData.name.trim()) {
-    newErrors.name = 'Program name is required';
-  } else {
-    const isValid = await validateName(formData.name);
-    if (!isValid) {
-      newErrors.name = 'Program name must be at least 3 characters';
+**Lazy loading** — all 12 pages loaded on demand via `React.lazy()`, reducing initial bundle size.
+
+### 4.4 Complex Form with Async Validation
+
+**ProgramForm.jsx** — multi-step form with calendar UI, exercise selection, and async validation:
+
+```javascript
+// Step 1: Program info + calendar date selection
+// Step 2: Exercise assignment per selected date
+const [step, setStep] = useState(1);
+
+// Async validation with loading state
+const validateForm = useCallback(async () => {
+    const newErrors = {};
+    setIsValidating(true);
+
+    // Simulate async validation (e.g., check program name uniqueness)
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    if (!formData.name.trim()) {
+        newErrors.name = 'Program name is required';
     }
-  }
-  // ...
-}, [formData, validateName]);
+    if (selectedDates.length === 0) {
+        newErrors.dates = 'Select at least one training day';
+    }
+    // Validate exercises assigned to each date...
+
+    setIsValidating(false);
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+}, [formData, selectedDates]);
 ```
 
-### 5. Unit Tests (27 тестов)
+Form features:
+- **Multi-step navigation** with progress indicator
+- **Interactive calendar** — 6-week grid, date selection with past-date prevention
+- **Dynamic exercise picker** — search, filter by bodyPart/equipment/target
+- **Per-date exercise configuration** — sets, reps, rest per exercise per day
+- **Async validation** — validates on step transition and before submission
+- **Edit mode** — pre-populates form when editing existing programs
 
-```bash
-✓ src/tests/exercisesSlice.test.js (7 tests)
-✓ src/tests/workoutsSlice.test.js (7 tests)
-✓ src/tests/programsSlice.test.js (7 tests)
-✓ src/tests/progressSlice.test.js (6 tests)
+### 4.5 Architecture: Container/Presenter Separation
 
-Test Files  4 passed (4)
-     Tests  27 passed (27)
-```
-
-**Покрытие тестами:**
-- Reducers и actions всех слайсов
-- Async thunk states (pending, fulfilled, rejected)
-- CRUD операции
-- Фильтрация и поиск
+| Layer | Role | Redux Access | Examples |
+|-------|------|-------------|----------|
+| **Pages (Containers)** | Business logic, data fetching, state orchestration | `useSelector`, `useDispatch` | HomePage, ExercisesPage, AdminPage |
+| **Components (Presenters)** | Pure UI rendering, props-driven | None | ExerciseCard, ExerciseFilter, ProgramForm, Header |
+| **Store (Slices)** | State management, async operations | Internal | userSlice, programsSlice, sessionSlice |
+| **Utils** | API configuration, shared helpers | None | api.js (authFetch with token refresh) |
 
 ---
 
-## Функциональность
+## 5. Test Results
 
-### Библиотека упражнений
-- 1300+ упражнений с GIF-анимациями
-- Фильтрация по группе мышц, оборудованию, целевой мышце
-- Поиск по названию
-- Пагинация с "Load More"
+### Test Suite: 133 tests across 12 files — all passed
 
-### Тренировочные программы
-- **Готовые программы** (от администраторов):
-  - Beginner Full Body
-  - Push Pull Legs
-  - Upper Lower Split
-- **Пользовательские программы**:
-  - Выбор длительности (1-52 недели)
-  - Выбор дней тренировок
-  - Добавление упражнений на каждый день
+```
+ ✓ src/tests/sessionSlice.test.js        (14 tests)  29ms
+ ✓ src/tests/workoutsSlice.test.js       (14 tests)  13ms
+ ✓ src/tests/progressSlice.test.js       (10 tests)  15ms
+ ✓ src/tests/userSlice.test.js           (27 tests)  16ms
+ ✓ src/tests/exercisesSlice.test.js       (7 tests)  25ms
+ ✓ src/tests/usersSlice.test.js          (14 tests)  24ms
+ ✓ src/tests/programsSlice.test.js       (17 tests)  26ms
+ ✓ src/tests/components/PrivateRoute.test.jsx  (3 tests)  69ms
+ ✓ src/tests/components/AdminRoute.test.jsx    (4 tests)  70ms
+ ✓ src/tests/components/ExerciseCard.test.jsx (10 tests)  84ms
+ ✓ src/tests/components/ExerciseFilter.test.jsx (9 tests) 99ms
+ ✓ src/tests/components/Loading.test.jsx       (4 tests)  36ms
 
-### Трекер прогресса
-- Статистика: streak, общее количество тренировок, объём
-- График активности по неделям (Chart.js)
-- Распределение по группам мышц (Doughnut chart)
-- История тренировок
+ Test Files  12 passed (12)
+      Tests  133 passed (133)
+   Duration  3.46s
+```
 
-### Профиль пользователя
-- Регистрация/авторизация (localStorage)
-- Цели тренировок
-- Настройки (единицы измерения, тема)
+### Coverage by Area
+
+| Test File | Tests | What's Covered |
+|-----------|-------|----------------|
+| **userSlice.test.js** | 27 | Register, login, checkAuth, logout, verifyEmail, forgotPassword, resetPassword, updateProfile, updatePreferences, setGoals — all pending/fulfilled/rejected states |
+| **programsSlice.test.js** | 17 | fetchPrograms, createProgram, editProgram, removeProgram thunks + setActiveProgram, clearActiveProgram, setEditingProgram sync actions + localStorage persistence |
+| **sessionSlice.test.js** | 14 | startSession (exercise mapping, default values), updateSet, toggleSetComplete, addSet (copy from last), removeSet (renumber), setCurrentExercise, endSession + localStorage |
+| **workoutsSlice.test.js** | 14 | fetchWorkouts, createWorkout, editWorkout, removeWorkout thunks + sync reducers + edge cases (not found, last item) |
+| **usersSlice.test.js** | 14 | Admin CRUD: fetchUsers, createUser, updateUser, deleteUser + clearError + error handling |
+| **progressSlice.test.js** | 10 | fetchHistory, logWorkout, updateWorkoutLog, deleteWorkoutLog + volume calculation + selectMuscleGroupDistribution selector |
+| **exercisesSlice.test.js** | 7 | setFilter, clearFilters, fetchExercises states, search filter, multi-filter combination |
+| **PrivateRoute.test.jsx** | 3 | Loading state, authenticated render, redirect to /login |
+| **AdminRoute.test.jsx** | 4 | Loading state, admin render, redirect to /login, redirect non-admin to / |
+| **ExerciseCard.test.jsx** | 10 | Render name/badges/equipment, View/Add/Selected buttons, click handlers, selected class, lazy image loading |
+| **ExerciseFilter.test.jsx** | 9 | Search input, dropdown options, onFilterChange callbacks, Clear button visibility and click |
+| **Loading.test.jsx** | 4 | Default text, custom text, spinner rings, container class |
 
 ---
 
-## Запуск проекта
+## 6. Technology Stack
+
+| Technology | Version | Purpose |
+|-----------|---------|---------|
+| React | 19.2.0 | UI library |
+| Redux Toolkit | 2.11.2 | Centralized state management |
+| React Router | 7.13.0 | Client-side routing |
+| Chart.js | 4.5.1 | Progress visualization (Line, Doughnut) |
+| react-chartjs-2 | 5.3.1 | React wrapper for Chart.js |
+| Lucide React | 0.563.0 | Icon library |
+| Vite | 7.2.4 | Build tool & dev server |
+| Vitest | 4.0.18 | Unit testing framework |
+| Testing Library | 16.3.2 | Component testing utilities |
+| Express.js | 4.x | Backend REST API |
+| MongoDB + Mongoose | 7.x | Database & ODM |
+| JWT (jsonwebtoken) | — | Authentication tokens |
+| bcrypt | — | Password hashing |
+| Nodemailer | — | Email verification (Gmail SMTP) |
+
+---
+
+## 7. Application Features
+
+### Exercise Library
+- 1300+ exercises with GIF animations and PNG thumbnails
+- Multi-criteria filtering: body part, equipment, target muscle
+- Text search by exercise name
+- Infinite scroll pagination with "Load More"
+- Detail modal with instructions and secondary muscles
+
+### Training Programs
+- **Admin programs** — pre-built programs (Beginner Full Body, Push Pull Legs, Upper Lower Split) with day-of-week schedule
+- **User programs** — custom calendar-based scheduling with date picker, exercise assignment per day, sets/reps/rest configuration
+- Active program selection with localStorage persistence
+
+### Live Workout Session
+- Start session from active program's scheduled workout
+- Per-set weight and reps input
+- Set completion toggle
+- Add/remove sets dynamically
+- Session state persisted in localStorage (survives page refresh)
+- Session completion logs to workout history
+
+### Progress Tracking
+- Statistics: workout streak, total workouts, total exercises, total volume
+- Weekly activity chart (Chart.js Line)
+- Muscle group distribution (Chart.js Doughnut)
+- Full workout history with dates
+
+### User Management
+- Registration with email verification (Gmail SMTP, port 465, SSL)
+- Login with JWT httpOnly cookies (access + refresh tokens)
+- Automatic token refresh on 401 responses (authFetch utility)
+- Password reset via email
+- Profile editing, preferences (units, theme), fitness goals
+
+### Admin Panel
+- User management: view, create, edit roles, delete
+- Exercise management: edit exercise details
+- Program management: create/edit admin programs
+
+---
+
+## 8. Deployment Plan
+
+### Build Steps
 
 ```bash
-# Установка зависимостей
+# Frontend
 cd strenvy
 npm install
+npm run build          # Creates dist/ with optimized production bundle
 
-# Запуск dev-сервера
-npm run dev
-
-# Production билд
-npm run build
-
-# Запуск тестов
-npm test
-
-# Тесты с покрытием
-npm run test:coverage
+# Backend
+cd backend
+npm install
+node server.js         # Starts Express on port 3000
 ```
+
+### Environment Variables (backend/.env)
+
+```
+MONGODB_URI=mongodb://localhost:27017/strenvy
+JWT_SECRET=<secret>
+JWT_REFRESH_SECRET=<secret>
+GMAIL_USER=<email>
+GMAIL_PASS=<app-password>
+CLIENT_URL=http://localhost:5173
+```
+
+### CI/CD Pipeline (GitHub Actions example)
+
+```yaml
+name: CI/CD
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: cd strenvy && npm ci
+      - run: cd strenvy && npx vitest run
+      - run: cd strenvy && npm run lint
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: cd strenvy && npm ci
+      - run: cd strenvy && npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: strenvy/dist/
+```
+
+### Production Deployment Options
+
+| Option | Frontend | Backend |
+|--------|----------|---------|
+| **Vercel + Railway** | Vercel (static hosting for dist/) | Railway (Node.js + MongoDB Atlas) |
+| **VPS (DigitalOcean)** | Nginx serving dist/ | PM2 process manager for Express |
+| **Docker** | Multi-stage build with Nginx | Node.js container + MongoDB container |
 
 ---
 
-## Структура данных
+## 9. Conclusion
 
-### Exercise
-```typescript
-interface Exercise {
-  id: string;
-  name: string;
-  bodyPart: string;      // waist, chest, back, etc.
-  equipment: string;     // body weight, barbell, dumbbell
-  target: string;        // abs, pectorals, quads
-  secondaryMuscles: string[];
-  instructions: string[];
-  gifUrl: string;
-  localGif: string;      // /gifs/{id}.gif
-  localPng: string;      // /gifs/{id}.png
-}
-```
+**Strenvy** implements all mandatory technical requirements:
 
-### Program
-```typescript
-interface Program {
-  id: string;
-  name: string;
-  description: string;
-  duration: number;      // недели
-  daysPerWeek: string[]; // ['monday', 'wednesday', 'friday']
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
-  isAdmin: boolean;
-  schedule: {
-    [day: string]: {
-      name: string;
-      exercises: Exercise[];
-    }
-  }
-}
-```
-
----
-
-## Заключение
-
-Проект **Strenvy** успешно реализует все технические требования:
-
-- ✅ React SPA с Redux Toolkit
-- ✅ Async thunks для загрузки данных
-- ✅ React Router с lazy loading и protected routes
-- ✅ Оптимизация производительности (memo, useMemo, useCallback)
-- ✅ Сложная форма с асинхронной валидацией
-- ✅ 27 unit-тестов
-- ✅ Архитектура Container/Presenter
+- **State Management** — Redux Toolkit with 29 async thunks across 7 slices, handling auth, CRUD, sessions, and admin operations
+- **Routing** — React Router 7 with PrivateRoute and AdminRoute guards, React.lazy + Suspense for lazy loading all 12 pages
+- **Performance** — React.memo on 8 components, useMemo for expensive computations, useCallback for 20+ handlers, lazy loading for code splitting
+- **Complex Form** — Multi-step ProgramForm with calendar UI, dynamic exercise selection, async validation, and edit mode
+- **Testing** — 133 unit tests across 12 files covering all 7 Redux slices (reducers + thunk states) and 5 React components
+- **Architecture** — Clear Container/Presenter separation with pages as containers and components as pure presenters
