@@ -85,65 +85,75 @@ backend/                      # Express.js REST API
 └── db.js                     # MongoDB connection
 ```
 
-### Component Diagram
+### Application Architecture
 
 ```mermaid
-graph TB
-    App[App.jsx — Provider + Router]
-    App --> Header[Header — memo]
-    App --> Suspense[Suspense + Loading fallback]
+graph LR
+    subgraph Frontend
+        App[App.jsx] --> Router[React Router]
 
-    Suspense --> Public[Public Routes]
-    Suspense --> Private[PrivateRoute Guard]
-    Suspense --> Admin[AdminRoute Guard]
+        subgraph Routes
+            Router --> Public[Login / Register / Verify / Reset]
+            Router --> Private[PrivateRoute]
+            Router --> Admin[AdminRoute]
+        end
 
-    Public --> Login[LoginPage]
-    Public --> Register[RegisterPage]
-    Public --> Verify[VerifyEmailPage]
-    Public --> Forgot[ForgotPasswordPage]
-    Public --> Reset[ResetPasswordPage]
+        subgraph Pages
+            Private --> P1[HomePage]
+            Private --> P2[ExercisesPage]
+            Private --> P3[ProgramsPage]
+            Private --> P4[ProgressPage]
+            Private --> P5[ProfilePage]
+            Private --> P6[SessionPage]
+            Admin --> P7[AdminPage]
+        end
 
-    Private --> Home[HomePage]
-    Private --> Exercises[ExercisesPage]
-    Private --> Programs[ProgramsPage]
-    Private --> Progress[ProgressPage]
-    Private --> Profile[ProfilePage]
-    Private --> Session[WorkoutSessionPage]
+        subgraph Components
+            P2 --> C1[ExerciseCard]
+            P2 --> C2[ExerciseFilter]
+            P3 --> C3[ProgramForm]
+            P4 --> C4[Chart.js]
+        end
+    end
 
-    Admin --> AdminPage[AdminPage]
+    subgraph State
+        Store[(Redux Store)]
+    end
 
-    Exercises --> ExCard[ExerciseCard x N — memo]
-    Exercises --> ExFilter[ExerciseFilter — memo]
-    Exercises --> ExModal[ExerciseModal — memo]
+    Pages -->|useDispatch| Store
+    Store -->|useSelector| Pages
 
-    Programs --> ProgForm[ProgramForm — memo + useMemo + useCallback]
+    Store -->|authFetch| API[Express API + MongoDB]
+```
 
-    Progress --> Charts[Chart.js — Line + Doughnut]
+### Redux Store Structure
 
-    Store[(Redux Store — 7 slices)]
-    Store -.-> UserSlice[userSlice — 11 async thunks]
-    Store -.-> ProgSlice[programsSlice — 4 async thunks]
-    Store -.-> ExSlice[exercisesSlice — 2 async thunks]
-    Store -.-> WorkSlice[workoutsSlice — 4 async thunks]
-    Store -.-> ProgressSlice[progressSlice — 4 async thunks]
-    Store -.-> SessionSlice[sessionSlice — 7 sync reducers]
-    Store -.-> UsersSlice[usersSlice — 4 async thunks]
-
-    API[Backend API — Express + MongoDB]
-    Store ==> API
+```mermaid
+graph TD
+    Store[(Redux Store)] --> U[userSlice<br/>11 async thunks<br/>auth, profile, email]
+    Store --> P[programsSlice<br/>4 thunks + 3 sync<br/>CRUD, active program]
+    Store --> E[exercisesSlice<br/>2 thunks + 2 sync<br/>library, filtering]
+    Store --> W[workoutsSlice<br/>4 thunks + 3 sync<br/>templates CRUD]
+    Store --> PR[progressSlice<br/>4 thunks + selectors<br/>history, stats]
+    Store --> S[sessionSlice<br/>7 sync reducers<br/>live session + localStorage]
+    Store --> US[usersSlice<br/>4 thunks<br/>admin user mgmt]
 ```
 
 ### Data Flow
 
-```
-User Interaction
-  → Page (Container) dispatches Redux thunk
-    → authFetch() sends request with httpOnly cookies
-      → Backend validates JWT, processes request
-        → Response returns to thunk
-          → extraReducers update Redux state
-            → useSelector triggers component re-render
-              → Presenter components receive new props
+```mermaid
+sequenceDiagram
+    participant User
+    participant Page as Page (Container)
+    participant Store as Redux Store
+    participant API as Backend API
+
+    User->>Page: interaction (click, submit)
+    Page->>Store: dispatch(asyncThunk)
+    Store->>API: authFetch + httpOnly cookies
+    API-->>Store: JSON response
+    Store-->>Page: state update via useSelector
+    Page-->>User: re-render with new data
 ```
 
 ---
